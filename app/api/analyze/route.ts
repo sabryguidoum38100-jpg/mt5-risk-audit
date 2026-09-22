@@ -15,7 +15,7 @@ import type { MT5Metrics } from "@/lib/mt5-parser";
 
 export const runtime = "nodejs";
 
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 // ---------------------------------------------------------------------------
 // Types de la réponse structurée attendue de Gemini
