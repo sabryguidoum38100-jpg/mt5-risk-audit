@@ -47,6 +47,7 @@ import {
 import ChartistPanel from "@/components/chartist-panel";
 import MacroSection from "@/components/macro-section";
 import SiteNav from "@/components/site-nav";
+import AuditPropLogo from "@/components/auditprop-logo";
 
 interface DetectedBias {
   name: string;
@@ -1053,9 +1054,10 @@ export default function Home() {
         <footer className="mt-20 border-t border-white/[0.07] pt-10 text-xs text-zinc-500">
           <div className="grid gap-8 sm:grid-cols-[1.3fr_1fr_1fr]">
             <div>
-              <p className="text-sm font-semibold text-white">
-                AuditProp
-              </p>
+              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                <AuditPropLogo className="h-7 w-7 text-emerald-400" />
+                <span>AuditProp</span>
+              </div>
               <p className="mt-2 max-w-xs leading-5">
                 Intelligence comportementale et contexte macro pour traders et
                 challenges Prop Firm.
