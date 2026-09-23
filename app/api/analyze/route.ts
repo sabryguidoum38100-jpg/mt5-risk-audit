@@ -15,8 +15,6 @@ import type { MT5Metrics } from "@/lib/mt5-parser";
 
 export const runtime = "nodejs";
 
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-
 // ---------------------------------------------------------------------------
 // Types de la réponse structurée attendue de Gemini
 // ---------------------------------------------------------------------------
@@ -110,7 +108,7 @@ export async function POST(request: NextRequest) {
     const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
-      model: MODEL_NAME,
+      model: "gemini-1.5-flash",
       contents: buildPrompt(metrics),
       config: {
         temperature: 0.4,
