@@ -15,10 +15,9 @@ import type { MT5Metrics } from "@/lib/mt5-parser";
 
 export const runtime = "nodejs";
 
-const PRIMARY_MODEL = "gemini-3.6-flash";
-const FALLBACK_MODEL = "gemini-2.5-flash";
+const MODEL_NAME = "gemini-3.6-flash";
 const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 1500;
+const RETRY_DELAY_MS = 2000;
 
 function isRetryableGeminiError(error: unknown): boolean {
   const candidate = error as {
@@ -30,7 +29,7 @@ function isRetryableGeminiError(error: unknown): boolean {
   const status = candidate?.status ?? candidate?.code ?? candidate?.response?.status;
   const message = candidate?.message ?? String(error);
 
-  return status === 429 || status === 503 || /\b(429|503)\b/.test(message);
+  return status === 503 || /\b503\b/.test(message);
 }
 
 function getErrorMessage(error: unknown): string {
@@ -102,7 +101,6 @@ Rédige toutes les valeurs textuelles en français.
 
 async function generateWithRetry(
   ai: GoogleGenAI,
-  model: string,
   prompt: string
 ) {
   let lastError: unknown;
@@ -110,7 +108,7 @@ async function generateWithRetry(
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
       return await ai.models.generateContent({
-        model,
+        model: MODEL_NAME,
         contents: prompt,
         config: {
           temperature: 0.4,
@@ -122,7 +120,7 @@ async function generateWithRetry(
       const canRetry = isRetryableGeminiError(error) && attempt < MAX_ATTEMPTS;
 
       console.warn(
-        `[api/analyze] ${model} a échoué (tentative ${attempt}/${MAX_ATTEMPTS}) :`,
+        `[api/analyze] ${MODEL_NAME} a échoué (tentative ${attempt}/${MAX_ATTEMPTS}) :`,
         getErrorMessage(error)
       );
 
@@ -131,7 +129,7 @@ async function generateWithRetry(
     }
   }
 
-  throw lastError ?? new Error(`Échec de l'appel à ${model}.`);
+  throw lastError ?? new Error(`Échec de l'appel à ${MODEL_NAME}.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -166,18 +164,7 @@ export async function POST(request: NextRequest) {
 
     const ai = new GoogleGenAI({ apiKey });
     const prompt = buildPrompt(metrics);
-    let response;
-
-    try {
-      response = await generateWithRetry(ai, PRIMARY_MODEL, prompt);
-    } catch (primaryError) {
-      console.warn(
-        `[api/analyze] ${PRIMARY_MODEL} indisponible après les réessais ; ` +
-          `bascule vers ${FALLBACK_MODEL}.`,
-        getErrorMessage(primaryError)
-      );
-      response = await generateWithRetry(ai, FALLBACK_MODEL, prompt);
-    }
+    const response = await generateWithRetry(ai, prompt);
 
     const rawText = response.text;
     if (!rawText) {
