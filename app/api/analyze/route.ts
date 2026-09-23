@@ -19,16 +19,21 @@ const MODEL_NAME = "gemini-3.6-flash";
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 2000;
 
-function isRetryableGeminiError(error: unknown): boolean {
+function getGeminiErrorStatus(error: unknown): number | undefined {
   const candidate = error as {
     status?: number;
     code?: number;
     response?: { status?: number };
-    message?: string;
   };
-  const status = candidate?.status ?? candidate?.code ?? candidate?.response?.status;
+  return candidate?.status ?? candidate?.response?.status ?? candidate?.code;
+}
+
+function isRetryableGeminiError(error: unknown): boolean {
+  const status = getGeminiErrorStatus(error);
+  const candidate = error as { message?: string };
   const message = candidate?.message ?? String(error);
 
+  if (status === 429) return false;
   return status === 503 || /\b503\b/.test(message);
 }
 
@@ -117,6 +122,14 @@ async function generateWithRetry(
       });
     } catch (error) {
       lastError = error;
+      const status = getGeminiErrorStatus(error);
+      if (status === 429) {
+        console.warn(
+          `[api/analyze] ${MODEL_NAME} a renvoyé 429 (quota dépassé) : aucun réessai.`,
+          getErrorMessage(error)
+        );
+        throw error;
+      }
       const canRetry = isRetryableGeminiError(error) && attempt < MAX_ATTEMPTS;
 
       console.warn(
