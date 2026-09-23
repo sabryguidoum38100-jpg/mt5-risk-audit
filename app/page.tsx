@@ -46,6 +46,7 @@ import {
 } from "@/lib/mt5-parser";
 import ChartistPanel from "@/components/chartist-panel";
 import MacroSection from "@/components/macro-section";
+import SiteNav from "@/components/site-nav";
 
 interface DetectedBias {
   name: string;
@@ -635,6 +636,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-black text-zinc-100">
+      <SiteNav />
       <div className="relative z-10 mx-auto max-w-6xl px-5 pb-20 sm:px-8">
         <header className="flex items-center justify-between border-b border-white/[0.07] py-5">
           <div className="flex items-center gap-3">
@@ -776,21 +778,23 @@ export default function Home() {
                 </h2>
               </div>
               <div className="mt-8 grid gap-3 md:grid-cols-3">
-                {([
-                  ["01", "Exporte ton rapport MT5", "CSV / HTML", Download],
+                {(
                   [
-                    "02",
-                    "L&apos;IA détecte tes biais",
-                    "Biais comportementaux et drawdown analysés",
-                    ScanSearch,
-                  ],
-                  [
-                    "03",
-                    "Sécurise tes challenges",
-                    "Ajuste ton plan de trading pour tes Prop Firms",
-                    ShieldCheck,
-                  ],
-                ] as const).map(([number, title, text, Icon]) => (
+                    ["01", "Exporte ton rapport MT5", "CSV / HTML", Download],
+                    [
+                      "02",
+                      "L&apos;IA détecte tes biais",
+                      "Biais comportementaux et drawdown analysés",
+                      ScanSearch,
+                    ],
+                    [
+                      "03",
+                      "Sécurise tes challenges",
+                      "Ajuste ton plan de trading pour tes Prop Firms",
+                      ShieldCheck,
+                    ],
+                  ] as const
+                ).map(([number, title, text, Icon]) => (
                   <div
                     key={number}
                     className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"

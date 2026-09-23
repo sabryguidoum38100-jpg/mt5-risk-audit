@@ -22,12 +22,9 @@ const FEEDS = [
     url: "https://finance.yahoo.com/news/rssindex",
     kind: "news",
   },
-  {
-    source: "Forex Factory",
-    url: "https://www.forexfactory.com/ffcal_week_this.xml",
-    kind: "calendar",
-  },
 ] as const;
+
+const CALENDAR_CURRENCIES = ["USD", "EUR", "GBP", "JPY"] as const;
 
 type MacroImpact = "high" | "moderate" | "low";
 
@@ -40,6 +37,23 @@ interface MacroItem {
   kind: "news" | "calendar";
   summary: string | null;
   impact: MacroImpact;
+  currency: "USD" | "EUR" | "GBP" | "JPY" | null;
+}
+
+function decodeXml(value: string) {
+  return value
+    .replace(/<!\[CDATA\[|\]\]>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+function currencyFor(value: string): MacroItem["currency"] {
+  const currency = value.toUpperCase();
+  return ["USD", "EUR", "GBP", "JPY"].includes(currency)
+    ? (currency as MacroItem["currency"])
+    : null;
 }
 
 function imageFrom(item: Record<string, unknown>): string | null {
@@ -79,6 +93,57 @@ function impactFor(title: string, summary: string | null): MacroImpact {
   return "low";
 }
 
+async function fetchCalendarCurrency(
+  currency: (typeof CALENDAR_CURRENCIES)[number],
+): Promise<MacroItem[]> {
+  const response = await fetch(
+    `https://api.fxmacrodata.com/v1/calendar/${currency}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok)
+    throw new Error(`FXMacroData ${currency} HTTP ${response.status}`);
+  const payload = (await response.json()) as {
+    data?: Array<Record<string, unknown>>;
+  };
+  return (payload.data ?? [])
+    .map((event) => {
+      const title =
+        typeof event.name === "string" ? event.name : "Événement macro";
+      const publishedAt =
+        typeof event.announcement_datetime_utc === "string"
+          ? event.announcement_datetime_utc
+          : null;
+      const importance =
+        typeof event.event_importance === "string"
+          ? event.event_importance.toLowerCase()
+          : "low";
+      const impact: MacroImpact =
+        importance === "high"
+          ? "high"
+          : importance === "medium" || importance === "moderate"
+            ? "moderate"
+            : "low";
+      return {
+        title,
+        link:
+          typeof event.source_url === "string"
+            ? event.source_url
+            : `https://api.fxmacrodata.com/v1/calendar/${currency}`,
+        source: typeof event.source === "string" ? event.source : "FXMacroData",
+        publishedAt,
+        image: null,
+        kind: "calendar" as const,
+        summary:
+          typeof event.release === "string"
+            ? event.release.replaceAll("_", " ")
+            : null,
+        impact,
+        currency,
+      };
+    })
+    .filter((item) => item.publishedAt && item.title);
+}
+
 async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<MacroItem[]> {
   const parsed = await parser.parseURL(feed.url);
   return parsed.items
@@ -95,6 +160,7 @@ async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<MacroItem[]> {
         kind: feed.kind,
         summary,
         impact: impactFor(title, summary),
+        currency: null,
       };
     })
     .filter((item) => item.title);
@@ -128,7 +194,10 @@ async function summarize(items: MacroItem[]): Promise<string | null> {
 }
 
 export async function GET() {
-  const results = await Promise.allSettled(FEEDS.map(fetchFeed));
+  const results = await Promise.allSettled([
+    ...FEEDS.map(fetchFeed),
+    ...CALENDAR_CURRENCIES.map(fetchCalendarCurrency),
+  ]);
   const successful = results.filter(
     (result): result is PromiseFulfilledResult<MacroItem[]> =>
       result.status === "fulfilled",
@@ -148,7 +217,17 @@ export async function GET() {
   const articles = items.filter((item) => item.kind === "news").slice(0, 10);
   const calendar = items
     .filter((item) => item.kind === "calendar")
-    .slice(0, 10);
+    .filter(
+      (item) =>
+        item.publishedAt &&
+        new Date(item.publishedAt).getTime() >= Date.now() - 60 * 60 * 1000,
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.publishedAt ?? 0).getTime() -
+        new Date(b.publishedAt ?? 0).getTime(),
+    )
+    .slice(0, 80);
   let marketSummary: string | null = null;
   try {
     marketSummary = await summarize(articles);
