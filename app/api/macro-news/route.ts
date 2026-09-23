@@ -29,6 +29,8 @@ const FEEDS = [
   },
 ] as const;
 
+type MacroImpact = "high" | "moderate" | "low";
+
 interface MacroItem {
   title: string;
   link: string;
@@ -37,6 +39,7 @@ interface MacroItem {
   image: string | null;
   kind: "news" | "calendar";
   summary: string | null;
+  impact: MacroImpact;
 }
 
 function imageFrom(item: Record<string, unknown>): string | null {
@@ -45,29 +48,55 @@ function imageFrom(item: Record<string, unknown>): string | null {
     { $?: { url?: string }; url?: string } | undefined;
   const thumbnail = item["media:thumbnail"] as
     { $?: { url?: string }; url?: string } | undefined;
+  const encoded =
+    typeof item["content:encoded"] === "string" ? item["content:encoded"] : "";
+  const htmlImage =
+    encoded.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ?? null;
   return (
     enclosure?.url ??
     media?.$?.url ??
     media?.url ??
     thumbnail?.$?.url ??
     thumbnail?.url ??
-    null
+    htmlImage
   );
+}
+
+function impactFor(title: string, summary: string | null): MacroImpact {
+  const text = `${title} ${summary ?? ""}`.toLowerCase();
+  if (
+    /fed|fomc|rate|interest|inflation|cpi|jobs|employment|war|tariff|sanction|crisis|default|recession|central bank/.test(
+      text,
+    )
+  )
+    return "high";
+  if (
+    /market|stocks|bond|oil|gold|dollar|euro|yen|earnings|growth|trade|economy/.test(
+      text,
+    )
+  )
+    return "moderate";
+  return "low";
 }
 
 async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<MacroItem[]> {
   const parsed = await parser.parseURL(feed.url);
   return parsed.items
     .slice(0, 12)
-    .map((item) => ({
-      title: (item.title ?? "").trim(),
-      link: item.link ?? feed.url,
-      source: feed.source,
-      publishedAt: item.isoDate ?? item.pubDate ?? null,
-      image: imageFrom(item as unknown as Record<string, unknown>),
-      kind: feed.kind,
-      summary: item.contentSnippet?.trim() ?? null,
-    }))
+    .map((item) => {
+      const title = (item.title ?? "").trim();
+      const summary = item.contentSnippet?.trim() ?? null;
+      return {
+        title,
+        link: item.link ?? feed.url,
+        source: feed.source,
+        publishedAt: item.isoDate ?? item.pubDate ?? null,
+        image: imageFrom(item as unknown as Record<string, unknown>),
+        kind: feed.kind,
+        summary,
+        impact: impactFor(title, summary),
+      };
+    })
     .filter((item) => item.title);
 }
 

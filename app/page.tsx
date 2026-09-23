@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Download,
   FileText,
   Flame,
   Gauge,
@@ -18,8 +19,10 @@ import {
   MessageCircle,
   Percent,
   RotateCcw,
+  ScanSearch,
   Shield,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   TrendingDown,
   TrendingUp,
@@ -82,7 +85,7 @@ function FAQSection() {
     ],
   ];
   return (
-    <section className="mx-auto max-w-4xl px-5 py-16 sm:px-8 sm:py-20">
+    <section id="faq" className="mx-auto max-w-4xl px-5 py-16 sm:px-8 sm:py-20">
       <div className="text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">
           FAQ
@@ -748,6 +751,14 @@ export default function Home() {
                 >
                   <Sparkles className="h-4 w-4" /> Tester avec un exemple
                 </button>
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.05] p-3 text-xs leading-5 text-emerald-100/80">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                  <span>
+                    Vos données de trading ne sont jamais stockées sur nos
+                    serveurs. L&apos;analyse des métriques est effectuée
+                    localement dans votre navigateur.
+                  </span>
+                </div>
                 {parseError && (
                   <div className="mt-3 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-4 text-xs text-rose-200">
                     {parseError}
@@ -765,30 +776,33 @@ export default function Home() {
                 </h2>
               </div>
               <div className="mt-8 grid gap-3 md:grid-cols-3">
-                {[
-                  [
-                    "01",
-                    "Importez votre historique",
-                    "Déposez votre export MT5 CSV, HTML ou TXT. Les données restent structurées et lisibles.",
-                  ],
+                {([
+                  ["01", "Exporte ton rapport MT5", "CSV / HTML", Download],
                   [
                     "02",
-                    "Auditez votre risque",
-                    "Les métriques, drawdowns et biais comportementaux sont calculés puis expliqués par l&apos;IA.",
+                    "L&apos;IA détecte tes biais",
+                    "Biais comportementaux et drawdown analysés",
+                    ScanSearch,
                   ],
                   [
                     "03",
-                    "Agissez avec contexte",
-                    "Comparez vos limites Prop Firm et consultez les flux macro réels du jour avant de décider.",
+                    "Sécurise tes challenges",
+                    "Ajuste ton plan de trading pour tes Prop Firms",
+                    ShieldCheck,
                   ],
-                ].map(([number, title, text]) => (
+                ] as const).map(([number, title, text, Icon]) => (
                   <div
                     key={number}
                     className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"
                   >
-                    <span className="text-xs font-semibold text-sky-300">
-                      {number}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-300/10 text-sky-300">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="text-xs font-semibold text-sky-300">
+                        Étape {number}
+                      </span>
+                    </div>
                     <h3 className="mt-5 text-sm font-semibold text-white">
                       {title}
                     </h3>
@@ -1175,9 +1189,56 @@ export default function Home() {
               )}
           </div>
         )}
-        <footer className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.07] pt-6 text-xs text-zinc-600">
-          <span>Risk &amp; Bias Audit · SaaS V2</span>
-          <span>Analyse de risque, pas conseil financier.</span>
+        <footer className="mt-20 border-t border-white/[0.07] pt-10 text-xs text-zinc-500">
+          <div className="grid gap-8 sm:grid-cols-[1.3fr_1fr_1fr]">
+            <div>
+              <p className="text-sm font-semibold text-white">
+                Risk &amp; Bias Audit
+              </p>
+              <p className="mt-2 max-w-xs leading-5">
+                Intelligence comportementale et contexte macro pour traders et
+                challenges Prop Firm.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold uppercase tracking-wider text-zinc-300">
+                Informations
+              </p>
+              <div className="mt-3 space-y-2">
+                <a href="#mentions-legales" className="block hover:text-white">
+                  Mentions légales
+                </a>
+                <a href="#confidentialite" className="block hover:text-white">
+                  Politique de confidentialité
+                </a>
+                <a href="#cgu" className="block hover:text-white">
+                  CGU / Conditions d&apos;utilisation
+                </a>
+              </div>
+            </div>
+            <div>
+              <p className="font-semibold uppercase tracking-wider text-zinc-300">
+                Besoin d&apos;aide ?
+              </p>
+              <div className="mt-3 space-y-2">
+                <a
+                  href="mailto:support@risk-bias-audit.com"
+                  className="block hover:text-white"
+                >
+                  Contact / Support
+                </a>
+                <a href="#faq" className="block hover:text-white">
+                  FAQ
+                </a>
+              </div>
+            </div>
+          </div>
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-5">
+            <span>
+              © {new Date().getFullYear()} Risk &amp; Bias Audit · SaaS V2
+            </span>
+            <span>Analyse de risque, pas conseil financier.</span>
+          </div>
         </footer>
       </div>
     </main>

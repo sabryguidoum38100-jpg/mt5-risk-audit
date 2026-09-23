@@ -341,7 +341,8 @@ export default function ChartistPanel({ result }: ChartistPanelProps) {
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
                 placeholder="Votre question sur le graphique…"
-                className="min-w-0 flex-1 border border-neutral-800 bg-neutral-900 px-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-neutral-700 focus:bg-neutral-900 focus:text-white focus:ring-0"
+                className="w-full rounded-lg border border-neutral-800 bg-black px-4 py-2 text-sm text-white outline-none placeholder:text-neutral-500 focus:bg-black focus:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{ backgroundColor: "#000000", color: "#ffffff" }}
               />
               <button
                 type="submit"

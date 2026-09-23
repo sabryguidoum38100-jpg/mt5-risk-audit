@@ -9,6 +9,7 @@ import {
   Loader2,
   RefreshCw,
   Sparkles,
+  TrendingUp,
 } from "lucide-react";
 
 interface MacroItem {
@@ -19,6 +20,7 @@ interface MacroItem {
   image: string | null;
   kind: "news" | "calendar";
   summary: string | null;
+  impact: "high" | "moderate" | "low";
 }
 interface MacroResponse {
   fetchedAt: string;
@@ -36,6 +38,43 @@ function formatDate(value: string | null) {
         timeStyle: "short",
       }).format(new Date(value))
     : "Heure indisponible";
+}
+
+function impactLabel(impact: MacroItem["impact"]) {
+  return impact === "high"
+    ? "Impact élevé"
+    : impact === "moderate"
+      ? "Impact modéré"
+      : "Impact faible";
+}
+
+function impactClass(impact: MacroItem["impact"]) {
+  return impact === "high"
+    ? "border-rose-300/20 bg-rose-300/10 text-rose-200"
+    : impact === "moderate"
+      ? "border-amber-300/20 bg-amber-300/10 text-amber-200"
+      : "border-sky-300/20 bg-sky-300/10 text-sky-200";
+}
+
+function fallbackVisual(item: MacroItem) {
+  const calendar = item.kind === "calendar";
+  return (
+    <div
+      className={`flex h-36 items-center justify-between border-b border-white/[0.07] px-5 ${calendar ? "bg-gradient-to-br from-amber-400/20 via-orange-400/10 to-black" : "bg-gradient-to-br from-sky-400/20 via-violet-400/10 to-black"}`}
+    >
+      <div>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+          {calendar ? "Economic calendar" : "Market intelligence"}
+        </span>
+        <p className="mt-2 max-w-[14rem] text-sm font-medium text-zinc-300">
+          {item.source}
+        </p>
+      </div>
+      <TrendingUp
+        className={`h-9 w-9 ${calendar ? "text-amber-300/60" : "text-sky-300/60"}`}
+      />
+    </div>
+  );
 }
 
 export default function MacroSection() {
@@ -175,15 +214,18 @@ export default function MacroSection() {
                       className="h-36 w-full object-cover opacity-80 transition group-hover:opacity-100"
                     />
                   ) : (
-                    <div className="flex h-20 items-center border-b border-white/[0.07] bg-gradient-to-br from-sky-400/10 to-violet-400/10 px-4">
-                      <Globe2 className="h-5 w-5 text-sky-300/60" />
-                    </div>
+                    fallbackVisual(item)
                   )}
                   <div className="p-4">
                     <div className="flex items-center justify-between gap-2 text-[10px] text-zinc-600">
                       <span>{item.source}</span>
                       <span>{formatDate(item.publishedAt)}</span>
                     </div>
+                    <span
+                      className={`mt-3 inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${impactClass(item.impact)}`}
+                    >
+                      {impactLabel(item.impact)}
+                    </span>
                     <h3 className="mt-2 line-clamp-3 text-sm font-medium leading-5 text-zinc-200">
                       {item.title}
                     </h3>
