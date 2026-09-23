@@ -15,6 +15,31 @@ import type { MT5Metrics } from "@/lib/mt5-parser";
 
 export const runtime = "nodejs";
 
+const PRIMARY_MODEL = "gemini-3.6-flash";
+const FALLBACK_MODEL = "gemini-2.5-flash";
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1500;
+
+function isRetryableGeminiError(error: unknown): boolean {
+  const candidate = error as {
+    status?: number;
+    code?: number;
+    response?: { status?: number };
+    message?: string;
+  };
+  const status = candidate?.status ?? candidate?.code ?? candidate?.response?.status;
+  const message = candidate?.message ?? String(error);
+
+  return status === 429 || status === 503 || /\b(429|503)\b/.test(message);
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
 // ---------------------------------------------------------------------------
 // Types de la réponse structurée attendue de Gemini
 // ---------------------------------------------------------------------------
@@ -72,7 +97,41 @@ Réponds STRICTEMENT en JSON valide, sans balises markdown ni texte autour, en s
 }
 
 Rédige toutes les valeurs textuelles en français.
-`.trim();
+	`.trim();
+}
+
+async function generateWithRetry(
+  ai: GoogleGenAI,
+  model: string,
+  prompt: string
+) {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          temperature: 0.4,
+          responseMimeType: "application/json",
+        },
+      });
+    } catch (error) {
+      lastError = error;
+      const canRetry = isRetryableGeminiError(error) && attempt < MAX_ATTEMPTS;
+
+      console.warn(
+        `[api/analyze] ${model} a échoué (tentative ${attempt}/${MAX_ATTEMPTS}) :`,
+        getErrorMessage(error)
+      );
+
+      if (!canRetry) throw error;
+      await wait(RETRY_DELAY_MS);
+    }
+  }
+
+  throw lastError ?? new Error(`Échec de l'appel à ${model}.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -106,15 +165,19 @@ export async function POST(request: NextRequest) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
+    const prompt = buildPrompt(metrics);
+    let response;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: buildPrompt(metrics),
-      config: {
-        temperature: 0.4,
-        responseMimeType: "application/json",
-      },
-    });
+    try {
+      response = await generateWithRetry(ai, PRIMARY_MODEL, prompt);
+    } catch (primaryError) {
+      console.warn(
+        `[api/analyze] ${PRIMARY_MODEL} indisponible après les réessais ; ` +
+          `bascule vers ${FALLBACK_MODEL}.`,
+        getErrorMessage(primaryError)
+      );
+      response = await generateWithRetry(ai, FALLBACK_MODEL, prompt);
+    }
 
     const rawText = response.text;
     if (!rawText) {
