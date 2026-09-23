@@ -15,6 +15,7 @@ import {
   Gauge,
   Lock,
   Loader2,
+  MessageCircle,
   Percent,
   RotateCcw,
   Shield,
@@ -238,7 +239,7 @@ function StatCard({
     neutral: "text-sky-300 bg-sky-400/10",
   };
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/10">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-2xl shadow-black/10">
       <div className="mb-5 flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
           {label}
@@ -337,7 +338,7 @@ function PropRulesChecker({ metrics }: { metrics: MT5Metrics }) {
   const compliant = metrics.maxDrawdownPercent <= rules.total;
   const nearLimit = metrics.maxDrawdownPercent > rules.daily && compliant;
   return (
-    <section className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-6 shadow-2xl shadow-black/10">
+    <section className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-2xl shadow-black/10 sm:p-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
@@ -447,7 +448,7 @@ function PremiumCard({
   text: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
       <div className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
         Premium
       </div>
@@ -471,6 +472,10 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<PsychAnalysis | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"cockpit" | "behavioral" | "prop">(
+    "cockpit",
+  );
+  const [planExpanded, setPlanExpanded] = useState(false);
 
   const handleAnalyze = useCallback(async (metrics: MT5Metrics) => {
     setIsAnalyzing(true);
@@ -559,13 +564,14 @@ export default function Home() {
     setAnalysis(null);
     setAnalysisError(null);
     setShowWarnings(false);
+    setActiveTab("cockpit");
+    setPlanExpanded(false);
     if (inputRef.current) inputRef.current.value = "";
   };
   const metrics = parseResult?.metrics;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#07090f] text-zinc-100">
-      <div className="pointer-events-none fixed inset-0 -z-0 bg-[radial-gradient(circle_at_18%_0%,rgba(56,189,248,0.12),transparent_32%),radial-gradient(circle_at_82%_8%,rgba(139,92,246,0.12),transparent_28%)]" />
+    <main className="min-h-screen overflow-hidden bg-black text-zinc-100">
       <div className="relative z-10 mx-auto max-w-6xl px-5 pb-20 sm:px-8">
         <header className="flex items-center justify-between border-b border-white/[0.07] py-5">
           <div className="flex items-center gap-3">
@@ -714,6 +720,33 @@ export default function Home() {
                 <X className="h-3.5 w-3.5" /> Effacer
               </button>
             </div>
+            <nav
+              className="sticky top-2 z-20 grid grid-cols-3 rounded-2xl border border-white/10 bg-black/95 p-1 shadow-xl shadow-black/30 backdrop-blur"
+              aria-label="Navigation du rapport"
+            >
+              {(
+                [
+                  ["cockpit", "Cockpit", "KPIs & graphique"],
+                  ["behavioral", "Analyse Behavioral", "Score & biais"],
+                  ["prop", "Prop Firm & Export", "Règles & Premium"],
+                ] as const
+              ).map(([tab, label, hint]) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-xl px-2 py-2.5 text-center transition sm:px-4 ${activeTab === tab ? "bg-white text-black" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"}`}
+                >
+                  <span className="block text-[11px] font-semibold sm:text-xs">
+                    {label}
+                  </span>
+                  <span
+                    className={`mt-0.5 hidden text-[10px] sm:block ${activeTab === tab ? "text-zinc-600" : "text-zinc-600"}`}
+                  >
+                    {hint}
+                  </span>
+                </button>
+              ))}
+            </nav>
             {parseResult.warnings.length > 0 && (
               <div>
                 <button
@@ -738,125 +771,206 @@ export default function Home() {
                 )}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <StatCard
-                label="P&L total"
-                value={`${signed(metrics.totalPnL)} $`}
-                icon={metrics.totalPnL >= 0 ? TrendingUp : TrendingDown}
-                tone={metrics.totalPnL >= 0 ? "good" : "bad"}
-              />
-              <StatCard
-                label="Win rate"
-                value={`${metrics.winRate.toFixed(1)}%`}
-                detail={`${metrics.totalWins} gagnants · ${metrics.totalLosses} perdants`}
-                icon={Percent}
-                tone={metrics.winRate >= 50 ? "good" : "warn"}
-              />
-              <StatCard
-                label="Max drawdown"
-                value={`${metrics.maxDrawdownPercent.toFixed(1)}%`}
-                detail={`${signed(-metrics.maxDrawdownAbsolute)} $`}
-                icon={Activity}
-                tone={
-                  metrics.maxDrawdownPercent > 10
-                    ? "bad"
-                    : metrics.maxDrawdownPercent > 5
-                      ? "warn"
-                      : "good"
-                }
-              />
-              <StatCard
-                label="Profit factor"
-                value={
-                  metrics.profitFactor === null
-                    ? "∞"
-                    : metrics.profitFactor.toFixed(2)
-                }
-                icon={Gauge}
-                tone={(metrics.profitFactor ?? 0) >= 1 ? "good" : "bad"}
-              />
-            </div>
-            <ChartistPanel result={parseResult} />
-            <div className="grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
-              <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/10">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">
-                      Courbe de capital
-                    </h3>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Évolution de l&apos;equity par transaction
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-400">
-                    {metrics.symbolsTraded.join(" · ")}
-                  </span>
+            {activeTab === "cockpit" && (
+              <>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                  <StatCard
+                    label="P&L total"
+                    value={`${signed(metrics.totalPnL)} $`}
+                    icon={metrics.totalPnL >= 0 ? TrendingUp : TrendingDown}
+                    tone={metrics.totalPnL >= 0 ? "good" : "bad"}
+                  />
+                  <StatCard
+                    label="Win rate"
+                    value={`${metrics.winRate.toFixed(1)}%`}
+                    detail={`${metrics.totalWins} gagnants · ${metrics.totalLosses} perdants`}
+                    icon={Percent}
+                    tone={metrics.winRate >= 50 ? "good" : "warn"}
+                  />
+                  <StatCard
+                    label="Max drawdown"
+                    value={`${metrics.maxDrawdownPercent.toFixed(1)}%`}
+                    detail={`${signed(-metrics.maxDrawdownAbsolute)} $`}
+                    icon={Activity}
+                    tone={
+                      metrics.maxDrawdownPercent > 10
+                        ? "bad"
+                        : metrics.maxDrawdownPercent > 5
+                          ? "warn"
+                          : "good"
+                    }
+                  />
+                  <StatCard
+                    label="Profit factor"
+                    value={
+                      metrics.profitFactor === null
+                        ? "∞"
+                        : metrics.profitFactor.toFixed(2)
+                    }
+                    icon={Gauge}
+                    tone={(metrics.profitFactor ?? 0) >= 1 ? "good" : "bad"}
+                  />
                 </div>
-                <ResponsiveContainer width="100%" height={310}>
-                  <AreaChart
-                    data={metrics.equityCurve}
-                    margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="v2Equity" x1="0" y1="0" x2="0" y2="1">
-                        <stop
-                          offset="5%"
-                          stopColor="#38bdf8"
-                          stopOpacity={0.35}
+                <ChartistPanel result={parseResult} />
+                <div className="grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
+                  <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/10">
+                    <div className="mb-5 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-white">
+                          Courbe de capital
+                        </h3>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Évolution de l&apos;equity par transaction
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-400">
+                        {metrics.symbolsTraded.join(" · ")}
+                      </span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={310}>
+                      <AreaChart
+                        data={metrics.equityCurve}
+                        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="v2Equity"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#38bdf8"
+                              stopOpacity={0.35}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#38bdf8"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#ffffff12"
+                          vertical={false}
                         />
-                        <stop
-                          offset="95%"
-                          stopColor="#38bdf8"
-                          stopOpacity={0}
+                        <XAxis
+                          dataKey="index"
+                          stroke="#71717a"
+                          tick={{ fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={{ stroke: "#ffffff1a" }}
                         />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="#ffffff12"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="index"
-                      stroke="#71717a"
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={{ stroke: "#ffffff1a" }}
-                    />
-                    <YAxis
-                      stroke="#71717a"
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={62}
-                      tickFormatter={(value: number) =>
-                        value.toLocaleString("fr-FR")
-                      }
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <ReferenceLine
-                      y={metrics.initialBalanceAssumed}
-                      stroke="#ffffff30"
-                      strokeDasharray="4 4"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="equity"
-                      stroke="#38bdf8"
-                      strokeWidth={2.5}
-                      fill="url(#v2Equity)"
-                      dot={false}
-                      activeDot={{
-                        r: 5,
-                        fill: "#38bdf8",
-                        stroke: "#07090f",
-                        strokeWidth: 2,
-                      }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                        <YAxis
+                          stroke="#71717a"
+                          tick={{ fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={62}
+                          tickFormatter={(value: number) =>
+                            value.toLocaleString("fr-FR")
+                          }
+                        />
+                        <Tooltip content={<ChartTooltip />} />
+                        <ReferenceLine
+                          y={metrics.initialBalanceAssumed}
+                          stroke="#ffffff30"
+                          strokeDasharray="4 4"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="equity"
+                          stroke="#38bdf8"
+                          strokeWidth={2.5}
+                          fill="url(#v2Equity)"
+                          dot={false}
+                          activeDot={{
+                            r: 5,
+                            fill: "#38bdf8",
+                            stroke: "#07090f",
+                            strokeWidth: 2,
+                          }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-6 shadow-2xl shadow-black/10">
+                    <div className="mb-5 flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300">
+                        <Brain className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-white">
+                          Psychological risk score
+                        </h3>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Lecture comportementale IA
+                        </p>
+                      </div>
+                    </div>
+                    {isAnalyzing && (
+                      <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-sky-300" />
+                        <p className="text-sm text-zinc-300">
+                          Analyse Groq en cours…
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          Vos métriques restent déterministes.
+                        </p>
+                      </div>
+                    )}
+                    {!isAnalyzing && analysisError && (
+                      <div className="space-y-3">
+                        <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-4 text-xs text-rose-200">
+                          {analysisError}
+                        </div>
+                        <button
+                          onClick={() => handleAnalyze(metrics)}
+                          className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300"
+                        >
+                          Réessayer
+                        </button>
+                      </div>
+                    )}
+                    {!isAnalyzing && analysis && (
+                      <div className="space-y-5">
+                        <RiskGauge score={analysis.riskScore} />
+                        <p className="text-sm leading-6 text-zinc-400">
+                          {analysis.summary}
+                        </p>
+                        <div
+                          className={`rounded-2xl border p-4 ${analysis.drawdownAlert.level === "critical" ? "border-rose-400/20 bg-rose-400/[0.06]" : analysis.drawdownAlert.level === "warning" ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-emerald-400/20 bg-emerald-400/[0.06]"}`}
+                        >
+                          <p className="text-xs leading-5 text-zinc-300">
+                            {analysis.drawdownAlert.message}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+            {activeTab === "prop" && <PropRulesChecker metrics={metrics} />}
+            {activeTab === "prop" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <PremiumCard
+                  icon={FileText}
+                  title="Export PDF professionnel"
+                  text="Transformez votre audit en rapport partageable pour votre journal ou votre coach."
+                />
+                <PremiumCard
+                  icon={Flame}
+                  title="Détecteur de revenge trading"
+                  text="Identifiez les ré-entrées émotionnelles et les séquences à risque avec une vue dédiée."
+                />
               </div>
-              <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-6 shadow-2xl shadow-black/10">
+            )}
+            {activeTab === "behavioral" && analysis && (
+              <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-4 sm:p-6">
                 <div className="mb-5 flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300">
                     <Brain className="h-4 w-4" />
@@ -866,108 +980,91 @@ export default function Home() {
                       Psychological risk score
                     </h3>
                     <p className="mt-1 text-xs text-zinc-500">
-                      Lecture comportementale IA
+                      Analyse comportementale IA
                     </p>
                   </div>
                 </div>
-                {isAnalyzing && (
-                  <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-sky-300" />
-                    <p className="text-sm text-zinc-300">
-                      Analyse Groq en cours…
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      Vos métriques restent déterministes.
-                    </p>
-                  </div>
-                )}
-                {!isAnalyzing && analysisError && (
-                  <div className="space-y-3">
-                    <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-4 text-xs text-rose-200">
-                      {analysisError}
-                    </div>
-                    <button
-                      onClick={() => handleAnalyze(metrics)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300"
-                    >
-                      Réessayer
-                    </button>
-                  </div>
-                )}
-                {!isAnalyzing && analysis && (
-                  <div className="space-y-5">
-                    <RiskGauge score={analysis.riskScore} />
-                    <p className="text-sm leading-6 text-zinc-400">
-                      {analysis.summary}
-                    </p>
-                    <div
-                      className={`rounded-2xl border p-4 ${analysis.drawdownAlert.level === "critical" ? "border-rose-400/20 bg-rose-400/[0.06]" : analysis.drawdownAlert.level === "warning" ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-emerald-400/20 bg-emerald-400/[0.06]"}`}
-                    >
-                      <p className="text-xs leading-5 text-zinc-300">
-                        {analysis.drawdownAlert.message}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <PropRulesChecker metrics={metrics} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <PremiumCard
-                icon={FileText}
-                title="Export PDF professionnel"
-                text="Transformez votre audit en rapport partageable pour votre journal ou votre coach."
-              />
-              <PremiumCard
-                icon={Flame}
-                title="Détecteur de revenge trading"
-                text="Identifiez les ré-entrées émotionnelles et les séquences à risque avec une vue dédiée."
-              />
-            </div>
-            {analysis && analysis.biasesDetected.length > 0 && (
-              <div className="grid gap-7 lg:grid-cols-2">
-                <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-6">
-                  <h3 className="mb-4 text-sm font-semibold text-white">
-                    Biais détectés
-                  </h3>
-                  <div className="space-y-3">
-                    {analysis.biasesDetected.map((bias, index) => (
-                      <div
-                        key={index}
-                        className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="flex items-center gap-2 text-sm font-medium text-white">
-                            <Flame className="h-3.5 w-3.5 text-violet-300" />
-                            {bias.name}
-                          </span>
-                          <Severity value={bias.severity} />
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-zinc-500">
-                          {bias.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-6">
-                  <h3 className="mb-4 text-sm font-semibold text-white">
-                    Plan d&apos;action
-                  </h3>
-                  <ul className="space-y-3">
-                    {analysis.recommendations.map((recommendation, index) => (
-                      <li
-                        key={index}
-                        className="flex items-start gap-3 text-sm leading-5 text-zinc-300"
-                      >
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                        {recommendation}
-                      </li>
-                    ))}
-                  </ul>
+                <RiskGauge score={analysis.riskScore} />
+                <p className="mt-5 text-sm leading-6 text-zinc-400">
+                  {analysis.summary}
+                </p>
+                <div
+                  className={`mt-5 rounded-2xl border p-4 ${analysis.drawdownAlert.level === "critical" ? "border-rose-400/20 bg-rose-400/[0.06]" : analysis.drawdownAlert.level === "warning" ? "border-amber-400/20 bg-amber-400/[0.06]" : "border-emerald-400/20 bg-emerald-400/[0.06]"}`}
+                >
+                  <p className="text-xs leading-5 text-zinc-300">
+                    {analysis.drawdownAlert.message}
+                  </p>
                 </div>
               </div>
             )}
+            {activeTab === "behavioral" &&
+              analysis &&
+              analysis.biasesDetected.length > 0 && (
+                <div className="grid gap-7 lg:grid-cols-2">
+                  <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-6">
+                    <h3 className="mb-4 text-sm font-semibold text-white">
+                      Biais détectés
+                    </h3>
+                    <div className="space-y-3">
+                      {analysis.biasesDetected.map((bias, index) => (
+                        <div
+                          key={index}
+                          className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex items-center gap-2 text-sm font-medium text-white">
+                              <Flame className="h-3.5 w-3.5 text-violet-300" />
+                              {bias.name}
+                            </span>
+                            <Severity value={bias.severity} />
+                          </div>
+                          <p className="mt-2 text-xs leading-5 text-zinc-500">
+                            {bias.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-4 sm:p-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-white">
+                        Plan d&apos;action
+                      </h3>
+                      <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                        {analysis.recommendations.length} étapes
+                      </span>
+                    </div>
+                    <ul className="mt-4 space-y-3">
+                      {analysis.recommendations
+                        .slice(0, planExpanded ? undefined : 1)
+                        .map((recommendation, index) => (
+                          <li
+                            key={index}
+                            className="flex items-start gap-3 text-sm leading-5 text-zinc-300"
+                          >
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                            {recommendation}
+                          </li>
+                        ))}
+                    </ul>
+                    {analysis.recommendations.length > 1 && (
+                      <button
+                        onClick={() => setPlanExpanded((value) => !value)}
+                        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-xs font-semibold text-zinc-300 transition hover:border-white/20 hover:text-white"
+                      >
+                        {planExpanded
+                          ? "Réduire le plan"
+                          : "Voir le plan complet"}
+                        {planExpanded ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
           </div>
         )}
         <footer className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.07] pt-6 text-xs text-zinc-600">
