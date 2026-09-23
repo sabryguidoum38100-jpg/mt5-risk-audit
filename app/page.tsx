@@ -534,7 +534,7 @@ export default function Home() {
             {isAnalyzing && (
               <div className="flex items-center gap-2 py-10 text-sm text-zinc-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Analyse en cours via Gemini…
+                Analyse en cours via Groq…
               </div>
             )}
 

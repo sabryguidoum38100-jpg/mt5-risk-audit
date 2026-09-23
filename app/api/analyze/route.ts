@@ -2,24 +2,24 @@
  * app/api/analyze/route.ts
  * ---------------------------------------------------------------------------
  * Reçoit UNIQUEMENT le JSON des métriques déjà calculées par
- * lib/mt5-parser.ts (jamais les transactions brutes) et demande à Gemini
+ * lib/mt5-parser.ts (jamais les transactions brutes) et demande à Groq
  * une analyse comportementale orientée "Prop Firm & Biais psychologiques" :
  * revenge trading, risque de dépassement de drawdown, recommandations.
  *
- * Nécessite la variable d'environnement GEMINI_API_KEY (voir .env.local.example).
+ * Nécessite la variable d'environnement GROQ_API_KEY.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import type { MT5Metrics } from "@/lib/mt5-parser";
 
 export const runtime = "nodejs";
 
-const MODEL_NAME = "gemini-3.6-flash";
+const MODEL_NAME = "llama-3.3-70b-versatile";
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 2000;
 
-function getGeminiErrorStatus(error: unknown): number | undefined {
+function getGroqErrorStatus(error: unknown): number | undefined {
   const candidate = error as {
     status?: number;
     code?: number;
@@ -28,8 +28,8 @@ function getGeminiErrorStatus(error: unknown): number | undefined {
   return candidate?.status ?? candidate?.response?.status ?? candidate?.code;
 }
 
-function isRetryableGeminiError(error: unknown): boolean {
-  const status = getGeminiErrorStatus(error);
+function isRetryableGroqError(error: unknown): boolean {
+  const status = getGroqErrorStatus(error);
   const candidate = error as { message?: string };
   const message = candidate?.message ?? String(error);
 
@@ -45,7 +45,7 @@ const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 // ---------------------------------------------------------------------------
-// Types de la réponse structurée attendue de Gemini
+// Types de la réponse structurée attendue de Groq
 // ---------------------------------------------------------------------------
 
 export interface DetectedBias {
@@ -104,36 +104,37 @@ Rédige toutes les valeurs textuelles en français.
 	`.trim();
 }
 
-async function generateWithRetry(
-  ai: GoogleGenAI,
-  prompt: string
-) {
+async function generateWithRetry(groq: Groq, prompt: string) {
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
-      return await ai.models.generateContent({
+      return await groq.chat.completions.create({
         model: MODEL_NAME,
-        contents: prompt,
-        config: {
-          temperature: 0.4,
-          responseMimeType: "application/json",
-        },
+        messages: [
+          {
+            role: "system",
+            content: "Réponds exclusivement avec un objet JSON valide, sans markdown ni texte autour.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.4,
+        response_format: { type: "json_object" },
       });
     } catch (error) {
       lastError = error;
-      const status = getGeminiErrorStatus(error);
+      const status = getGroqErrorStatus(error);
       if (status === 429) {
         console.warn(
-          `[api/analyze] ${MODEL_NAME} a renvoyé 429 (quota dépassé) : aucun réessai.`,
+          `[api/analyze] Groq a renvoyé 429 (quota dépassé) : aucun réessai.`,
           getErrorMessage(error)
         );
         throw error;
       }
-      const canRetry = isRetryableGeminiError(error) && attempt < MAX_ATTEMPTS;
+      const canRetry = isRetryableGroqError(error) && attempt < MAX_ATTEMPTS;
 
       console.warn(
-        `[api/analyze] ${MODEL_NAME} a échoué (tentative ${attempt}/${MAX_ATTEMPTS}) :`,
+        `[api/analyze] Groq/${MODEL_NAME} a échoué (tentative ${attempt}/${MAX_ATTEMPTS}) :`,
         getErrorMessage(error)
       );
 
@@ -142,7 +143,7 @@ async function generateWithRetry(
     }
   }
 
-  throw lastError ?? new Error(`Échec de l'appel à ${MODEL_NAME}.`);
+  throw lastError ?? new Error(`Échec de l'appel à Groq/${MODEL_NAME}.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -151,12 +152,12 @@ async function generateWithRetry(
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         {
           error:
-            "GEMINI_API_KEY n'est pas configurée côté serveur. Ajoutez-la dans votre fichier .env.local (voir .env.local.example).",
+            "GROQ_API_KEY n'est pas configurée côté serveur. Ajoutez-la dans les variables d'environnement Vercel.",
         },
         { status: 500 }
       );
@@ -175,16 +176,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const groq = new Groq({ apiKey });
     const prompt = buildPrompt(metrics);
-    const response = await generateWithRetry(ai, prompt);
+    const response = await generateWithRetry(groq, prompt);
 
-    const rawText = response.text;
+    const rawText = response.choices[0]?.message?.content;
     if (!rawText) {
-      return NextResponse.json(
-        { error: "Réponse vide reçue de Gemini." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: "Réponse vide reçue de Groq." }, { status: 502 });
     }
 
     let analysis: PsychAnalysis;
@@ -193,7 +191,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json(
         {
-          error: "La réponse de Gemini n'a pas pu être interprétée comme du JSON valide.",
+          error: "La réponse de Groq n'a pas pu être interprétée comme du JSON valide.",
           raw: rawText,
         },
         { status: 502 }
@@ -204,7 +202,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[api/analyze] Erreur :", err);
     const message =
-      err instanceof Error ? err.message : "Erreur inconnue lors de l'appel à Gemini.";
+        err instanceof Error ? err.message : "Erreur inconnue lors de l'appel à Groq.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -4,14 +4,14 @@ MVP à page unique (Next.js 15, App Router, TypeScript, Tailwind CSS) qui
 analyse un export d'historique MetaTrader 5 (CSV ou HTML) pour en extraire
 des métriques de risque et détecter des biais psychologiques de trading
 (revenge trading, dépassement de drawdown, séries de pertes) via l'API
-Gemini.
+Groq et le modèle `llama-3.3-70b-versatile`.
 
 ## Installation
 
 ```bash
 npm install
 cp .env.local.example .env.local
-# puis renseignez GEMINI_API_KEY dans .env.local
+# puis renseignez GROQ_API_KEY dans .env.local
 npm run dev
 ```
 
@@ -24,7 +24,7 @@ Ouvrez [http://localhost:3000](http://localhost:3000).
   factor, max drawdown, séries de pertes, détection de ré-entrées rapides
   après une perte).
 - `app/api/analyze/route.ts` — route API qui envoie uniquement le JSON des
-  métriques (jamais les transactions brutes) à Gemini pour une analyse
+  métriques (jamais les transactions brutes) à Groq pour une analyse
   comportementale orientée prop firm.
 - `app/page.tsx` — interface (drag & drop, cartes de stats, courbe de
   capital via Recharts, carte d'analyse psychologique).
