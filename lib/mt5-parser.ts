@@ -45,6 +45,8 @@ export interface MT5Trade {
   symbol: string;
   price: number;
   profit: number;
+  stopLoss?: number;
+  takeProfit?: number;
 }
 
 export interface LosingStreak {
@@ -117,7 +119,9 @@ type HeaderRole =
   | "volume"
   | "symbol"
   | "price"
-  | "profit";
+  | "profit"
+  | "stopLoss"
+  | "takeProfit";
 
 const HEADER_ALIASES: Record<HeaderRole, string[]> = {
   ticket: ["ticket", "deal", "position", "order", "#", "id"],
@@ -144,6 +148,8 @@ const HEADER_ALIASES: Record<HeaderRole, string[]> = {
     "result",
     "net profit",
   ],
+  stopLoss: ["stop loss", "stoploss", "sl", "stop-loss"],
+  takeProfit: ["take profit", "takeprofit", "tp", "take-profit"],
 };
 
 const EXCLUDED_TYPE_KEYWORDS = [
@@ -254,6 +260,8 @@ interface ColumnMap {
   symbol?: number;
   price?: number;
   profit?: number;
+  stopLoss?: number;
+  takeProfit?: number;
 }
 
 function matchRole(headerCell: string): HeaderRole | null {
@@ -302,6 +310,12 @@ function detectColumnRoles(headerCells: string[]): ColumnMap {
         break;
       case "profit":
         if (map.profit === undefined) map.profit = idx;
+        break;
+      case "stopLoss":
+        if (map.stopLoss === undefined) map.stopLoss = idx;
+        break;
+      case "takeProfit":
+        if (map.takeProfit === undefined) map.takeProfit = idx;
         break;
     }
   });
@@ -368,6 +382,8 @@ function buildTradeFromRow(
   const symbol = get(map.symbol);
   const price = parseNumber(get(map.price));
   const profit = parseNumber(get(map.profit));
+  const stopLoss = parseNumber(get(map.stopLoss));
+  const takeProfit = parseNumber(get(map.takeProfit));
 
   // Une ligne "d'entrée" (in) d'un Deal HTML n'a pas de profit renseigné :
   // c'est un cas normal, on l'ignore silencieusement (pas un warning).
@@ -397,6 +413,8 @@ function buildTradeFromRow(
     symbol: symbol.toUpperCase(),
     price,
     profit,
+    ...(Number.isFinite(stopLoss) && stopLoss > 0 ? { stopLoss } : {}),
+    ...(Number.isFinite(takeProfit) && takeProfit > 0 ? { takeProfit } : {}),
   };
 }
 
