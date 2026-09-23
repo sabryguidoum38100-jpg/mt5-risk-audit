@@ -4,12 +4,13 @@
 
 html,
 body {
-  background-color: #000000;
+  background-color: #07090f;
+  min-height: 100%;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #27272a #000000;
+  scrollbar-color: #334155 #07090f;
 }
 
 ::-webkit-scrollbar {
@@ -18,7 +19,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: #07090f;
 }
 
 ::-webkit-scrollbar-thumb {

@@ -5,9 +5,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Risk & Bias Audit — MT5",
+  title: "Risk & Bias Audit — Prop Firm Intelligence",
   description:
-    "Audit de risque et de biais psychologiques pour l'historique de trading MetaTrader 5.",
+    "Analyse comportementale IA et protection drawdown pour les challenges Prop Firm.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
