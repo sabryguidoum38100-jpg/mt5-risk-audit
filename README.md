@@ -4,7 +4,7 @@ MVP à page unique (Next.js 15, App Router, TypeScript, Tailwind CSS) qui
 analyse un export d'historique MetaTrader 5 (CSV ou HTML) pour en extraire
 des métriques de risque et détecter des biais psychologiques de trading
 (revenge trading, dépassement de drawdown, séries de pertes) via l'API
-Groq et le modèle `llama-3.3-70b-versatile`.
+Groq et le modèle actif `openai/gpt-oss-120b`.
 
 ## Installation
 

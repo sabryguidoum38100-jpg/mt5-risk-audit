@@ -16,7 +16,7 @@ import type { MT5Metrics } from "@/lib/mt5-parser";
 export const runtime = "nodejs";
 
 // Force Vercel rebuild: Groq migration cache-busting revision.
-const MODEL_NAME = "llama3-70b-8192";
+const MODEL_NAME = "openai/gpt-oss-120b";
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 2000;
 
