@@ -15,6 +15,7 @@ import type { MT5Metrics } from "@/lib/mt5-parser";
 
 export const runtime = "nodejs";
 
+// Force Vercel rebuild: Groq migration cache-busting revision.
 const MODEL_NAME = "llama-3.3-70b-versatile";
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 2000;
