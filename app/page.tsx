@@ -42,6 +42,7 @@ import {
   type MT5ParseResult,
 } from "@/lib/mt5-parser";
 import ChartistPanel from "@/components/chartist-panel";
+import MacroSection from "@/components/macro-section";
 
 interface DetectedBias {
   name: string;
@@ -59,6 +60,65 @@ interface PsychAnalysis {
 
 type PropFirm = "FTMO" | "Topstep" | "FundedNext";
 type AccountSize = 10000 | 50000 | 100000 | 200000;
+
+function FAQSection() {
+  const [open, setOpen] = useState<number | null>(null);
+  const questions = [
+    [
+      "Quels fichiers MT5 sont compatibles ?",
+      "Les exports CSV, HTML et TXT de MetaTrader 5 sont acceptés. Les métriques sont calculées localement avant l'analyse IA.",
+    ],
+    [
+      "Les actualités macro sont-elles fictives ?",
+      "Non. Le module récupère des flux RSS publics distants à chaque chargement et affiche les titres, sources, horaires et liens originaux.",
+    ],
+    [
+      "L'analyse constitue-t-elle un conseil financier ?",
+      "Non. Il s'agit d'un outil d'analyse de risque et de contexte. Les décisions de trading restent sous votre responsabilité.",
+    ],
+    [
+      "Comment fonctionne le baromètre IA ?",
+      "Les cinq dernières actualités réelles récupérées sont envoyées à Groq pour produire un résumé prudent, sans inventer de chiffres ni d'événements.",
+    ],
+  ];
+  return (
+    <section className="mx-auto max-w-4xl px-5 py-16 sm:px-8 sm:py-20">
+      <div className="text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">
+          FAQ
+        </p>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+          Questions fréquentes
+        </h2>
+      </div>
+      <div className="mt-8 space-y-2">
+        {questions.map(([question, answer], index) => (
+          <div
+            key={question}
+            className="rounded-2xl border border-white/[0.08] bg-white/[0.025]"
+          >
+            <button
+              onClick={() => setOpen(open === index ? null : index)}
+              className="flex w-full items-center justify-between gap-4 p-4 text-left text-sm font-medium text-white"
+            >
+              <span>{question}</span>
+              {open === index ? (
+                <ChevronUp className="h-4 w-4 shrink-0 text-sky-300" />
+              ) : (
+                <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500" />
+              )}
+            </button>
+            {open === index && (
+              <p className="border-t border-white/[0.07] px-4 pb-4 pt-3 text-sm leading-6 text-zinc-500">
+                {answer}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 const FIRM_RULES: Record<
   PropFirm,
@@ -598,102 +658,150 @@ export default function Home() {
         </header>
 
         {!parseResult && (
-          <section className="grid items-center gap-12 py-16 lg:grid-cols-[1.08fr_0.92fr] lg:py-24">
-            <div>
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-300/[0.07] px-3 py-1.5 text-xs font-medium text-sky-200">
-                <Sparkles className="h-3.5 w-3.5" /> Intelligence
-                comportementale pour traders
-              </div>
-              <h1 className="max-w-3xl text-4xl font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl">
-                Transformez votre historique MT5 en{" "}
-                <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
-                  avantage de survie.
-                </span>
-              </h1>
-              <p className="mt-6 max-w-xl text-base leading-7 text-zinc-400 sm:text-lg">
-                Analyse comportementale IA, protection contre le drawdown et
-                lecture claire de vos biais pour réussir vos challenges Prop
-                Firms avec plus de discipline.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                <span className="mr-1 font-medium text-zinc-400">
-                  Compatible avec
-                </span>
-                {["FTMO", "FundedNext", "Topstep", "MFF"].map((firm) => (
-                  <span
-                    key={firm}
-                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-semibold text-zinc-300"
-                  >
-                    {firm}
+          <>
+            <section className="grid items-center gap-12 py-16 lg:grid-cols-[1.08fr_0.92fr] lg:py-24">
+              <div>
+                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-300/[0.07] px-3 py-1.5 text-xs font-medium text-sky-200">
+                  <Sparkles className="h-3.5 w-3.5" /> Intelligence
+                  comportementale pour traders
+                </div>
+                <h1 className="max-w-3xl text-4xl font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl">
+                  Transformez votre historique MT5 en{" "}
+                  <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
+                    avantage de survie.
                   </span>
+                </h1>
+                <p className="mt-6 max-w-xl text-base leading-7 text-zinc-400 sm:text-lg">
+                  Analyse comportementale IA, protection contre le drawdown et
+                  lecture claire de vos biais pour réussir vos challenges Prop
+                  Firms avec plus de discipline.
+                </p>
+                <div className="mt-7 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                  <span className="mr-1 font-medium text-zinc-400">
+                    Compatible avec
+                  </span>
+                  {["FTMO", "FundedNext", "Topstep", "MFF"].map((firm) => (
+                    <span
+                      key={firm}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-semibold text-zinc-300"
+                    >
+                      {firm}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-8 flex flex-wrap gap-5 text-xs text-zinc-500">
+                  <span className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-300" /> Analyse
+                    locale des métriques
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-emerald-300" /> Aucune
+                    transaction brute envoyée
+                  </span>
+                </div>
+              </div>
+              <div>
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setIsDragging(false);
+                    handleFiles(event.dataTransfer.files);
+                  }}
+                  onClick={() => inputRef.current?.click()}
+                  role="button"
+                  tabIndex={0}
+                  className={`group cursor-pointer rounded-3xl border p-5 shadow-2xl shadow-black/20 transition ${isDragging ? "border-sky-300/60 bg-sky-300/[0.08]" : "border-white/[0.12] bg-white/[0.045] hover:border-sky-300/30 hover:bg-white/[0.06]"}`}
+                >
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept=".csv,.html,.htm,.txt"
+                    className="hidden"
+                    onChange={(event) => handleFiles(event.target.files)}
+                  />
+                  <div className="rounded-2xl border border-dashed border-white/15 px-5 py-12 text-center">
+                    <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/20 to-indigo-400/20 text-sky-200">
+                      <UploadCloud className="h-6 w-6 transition group-hover:-translate-y-1" />
+                    </div>
+                    <p className="text-sm font-semibold text-white">
+                      Déposez votre historique MT5
+                    </p>
+                    <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+                      CSV, HTML ou TXT · 15 Mo maximum
+                    </p>
+                    <span className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-zinc-950">
+                      Choisir un fichier <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    loadDemo();
+                  }}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-300/20 bg-violet-300/[0.07] px-4 py-3 text-xs font-semibold text-violet-200 transition hover:bg-violet-300/[0.12]"
+                >
+                  <Sparkles className="h-4 w-4" /> Tester avec un exemple
+                </button>
+                {parseError && (
+                  <div className="mt-3 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-4 text-xs text-rose-200">
+                    {parseError}
+                  </div>
+                )}
+              </div>
+            </section>
+            <section className="border-t border-white/[0.07] py-14">
+              <div className="text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">
+                  Comment ça marche
+                </p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+                  De l&apos;historique brut à une décision plus lucide
+                </h2>
+              </div>
+              <div className="mt-8 grid gap-3 md:grid-cols-3">
+                {[
+                  [
+                    "01",
+                    "Importez votre historique",
+                    "Déposez votre export MT5 CSV, HTML ou TXT. Les données restent structurées et lisibles.",
+                  ],
+                  [
+                    "02",
+                    "Auditez votre risque",
+                    "Les métriques, drawdowns et biais comportementaux sont calculés puis expliqués par l&apos;IA.",
+                  ],
+                  [
+                    "03",
+                    "Agissez avec contexte",
+                    "Comparez vos limites Prop Firm et consultez les flux macro réels du jour avant de décider.",
+                  ],
+                ].map(([number, title, text]) => (
+                  <div
+                    key={number}
+                    className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"
+                  >
+                    <span className="text-xs font-semibold text-sky-300">
+                      {number}
+                    </span>
+                    <h3 className="mt-5 text-sm font-semibold text-white">
+                      {title}
+                    </h3>
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">
+                      {text}
+                    </p>
+                  </div>
                 ))}
               </div>
-              <div className="mt-8 flex flex-wrap gap-5 text-xs text-zinc-500">
-                <span className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-300" /> Analyse locale
-                  des métriques
-                </span>
-                <span className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-300" /> Aucune
-                  transaction brute envoyée
-                </span>
-              </div>
-            </div>
-            <div>
-              <div
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setIsDragging(false);
-                  handleFiles(event.dataTransfer.files);
-                }}
-                onClick={() => inputRef.current?.click()}
-                role="button"
-                tabIndex={0}
-                className={`group cursor-pointer rounded-3xl border p-5 shadow-2xl shadow-black/20 transition ${isDragging ? "border-sky-300/60 bg-sky-300/[0.08]" : "border-white/[0.12] bg-white/[0.045] hover:border-sky-300/30 hover:bg-white/[0.06]"}`}
-              >
-                <input
-                  ref={inputRef}
-                  type="file"
-                  accept=".csv,.html,.htm,.txt"
-                  className="hidden"
-                  onChange={(event) => handleFiles(event.target.files)}
-                />
-                <div className="rounded-2xl border border-dashed border-white/15 px-5 py-12 text-center">
-                  <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/20 to-indigo-400/20 text-sky-200">
-                    <UploadCloud className="h-6 w-6 transition group-hover:-translate-y-1" />
-                  </div>
-                  <p className="text-sm font-semibold text-white">
-                    Déposez votre historique MT5
-                  </p>
-                  <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-                    CSV, HTML ou TXT · 15 Mo maximum
-                  </p>
-                  <span className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-zinc-950">
-                    Choisir un fichier <ArrowRight className="h-3.5 w-3.5" />
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={(event) => {
-                  event.stopPropagation();
-                  loadDemo();
-                }}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-300/20 bg-violet-300/[0.07] px-4 py-3 text-xs font-semibold text-violet-200 transition hover:bg-violet-300/[0.12]"
-              >
-                <Sparkles className="h-4 w-4" /> Tester avec un exemple
-              </button>
-              {parseError && (
-                <div className="mt-3 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-4 text-xs text-rose-200">
-                  {parseError}
-                </div>
-              )}
-            </div>
-          </section>
+            </section>
+            <MacroSection />
+            <FAQSection />
+          </>
         )}
 
         {parseResult && metrics && (

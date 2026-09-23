@@ -22,6 +22,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import type { MT5ParseResult } from "@/lib/mt5-parser";
 import {
   buildChartContext,
@@ -297,7 +298,28 @@ export default function ChartistPanel({ result }: ChartistPanelProps) {
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
                   {message.role === "user" ? "Vous" : "Assistant"}
                 </p>
-                {message.content}
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => (
+                      <p className="mb-2 last:mb-0">{children}</p>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-white">
+                        {children}
+                      </strong>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="my-2 list-disc space-y-1 pl-5">
+                        {children}
+                      </ul>
+                    ),
+                    li: ({ children }) => <li>{children}</li>,
+                  }}
+                >
+                  {message.content
+                    .replace(/<br\s*\/?>(\s*)/gi, "\n$1")
+                    .replace(/\|\|/g, "\n\n")}
+                </ReactMarkdown>
               </div>
             ))}
             {isSending && (
@@ -319,7 +341,7 @@ export default function ChartistPanel({ result }: ChartistPanelProps) {
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
                 placeholder="Votre question sur le graphique…"
-                className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none placeholder:text-zinc-600"
+                className="min-w-0 flex-1 border border-neutral-800 bg-neutral-900 px-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-neutral-700 focus:bg-neutral-900 focus:text-white focus:ring-0"
               />
               <button
                 type="submit"
