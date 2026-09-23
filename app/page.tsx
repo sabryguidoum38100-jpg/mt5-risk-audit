@@ -40,7 +40,7 @@ import {
   YAxis,
 } from "recharts";
 import {
-  parseMT5History,
+  parseUniversalHistory,
   type MT5Metrics,
   type MT5ParseResult,
 } from "@/lib/mt5-parser";
@@ -132,138 +132,6 @@ const FIRM_RULES: Record<
   Topstep: { tagline: "Trading Combine", daily: 5, total: 10 },
   FundedNext: { tagline: "Evaluation", daily: 5, total: 10 },
 };
-
-const DEMO_METRICS: MT5Metrics = {
-  totalTrades: 24,
-  totalWins: 13,
-  totalLosses: 11,
-  totalPnL: 840,
-  winRate: 54.2,
-  profitFactor: 1.31,
-  maxDrawdownPercent: 4.8,
-  maxDrawdownAbsolute: 480,
-  averageWin: 142,
-  averageLoss: 96,
-  bestTrade: 410,
-  worstTrade: -260,
-  maxLosingStreak: {
-    length: 3,
-    totalLoss: -260,
-    startTicket: "DEMO-08",
-    endTicket: "DEMO-10",
-    startTime: "2026-09-01T09:00:00Z",
-    endTime: "2026-09-03T09:00:00Z",
-  },
-  significantLosingStreaks: 1,
-  quickReentriesAfterLoss: 2,
-  revengeWindowMinutes: 5,
-  initialBalanceAssumed: 10000,
-  startDate: "2026-09-01T09:00:00Z",
-  endDate: "2026-09-22T16:00:00Z",
-  symbolsTraded: ["EURUSD", "NAS100", "XAUUSD"],
-  equityCurve: [
-    {
-      index: 0,
-      ticket: "INIT",
-      time: "2026-09-01T09:00:00Z",
-      equity: 10000,
-      profit: 0,
-    },
-    {
-      index: 1,
-      ticket: "DEMO-01",
-      time: "2026-09-01T12:00:00Z",
-      equity: 10180,
-      profit: 180,
-    },
-    {
-      index: 2,
-      ticket: "DEMO-02",
-      time: "2026-09-03T09:00:00Z",
-      equity: 10090,
-      profit: -90,
-    },
-    {
-      index: 3,
-      ticket: "DEMO-03",
-      time: "2026-09-05T14:00:00Z",
-      equity: 10320,
-      profit: 230,
-    },
-    {
-      index: 4,
-      ticket: "DEMO-04",
-      time: "2026-09-08T10:00:00Z",
-      equity: 10410,
-      profit: 90,
-    },
-    {
-      index: 5,
-      ticket: "DEMO-05",
-      time: "2026-09-10T15:00:00Z",
-      equity: 10280,
-      profit: -130,
-    },
-    {
-      index: 6,
-      ticket: "DEMO-06",
-      time: "2026-09-12T11:00:00Z",
-      equity: 10540,
-      profit: 260,
-    },
-    {
-      index: 7,
-      ticket: "DEMO-07",
-      time: "2026-09-15T13:00:00Z",
-      equity: 10460,
-      profit: -80,
-    },
-    {
-      index: 8,
-      ticket: "DEMO-08",
-      time: "2026-09-17T09:00:00Z",
-      equity: 10280,
-      profit: -180,
-    },
-    {
-      index: 9,
-      ticket: "DEMO-09",
-      time: "2026-09-18T09:00:00Z",
-      equity: 10120,
-      profit: -160,
-    },
-    {
-      index: 10,
-      ticket: "DEMO-10",
-      time: "2026-09-19T09:00:00Z",
-      equity: 10060,
-      profit: -60,
-    },
-    {
-      index: 11,
-      ticket: "DEMO-11",
-      time: "2026-09-20T14:00:00Z",
-      equity: 10350,
-      profit: 290,
-    },
-    {
-      index: 12,
-      ticket: "DEMO-12",
-      time: "2026-09-22T16:00:00Z",
-      equity: 10840,
-      profit: 490,
-    },
-  ],
-};
-
-function demoResult(): MT5ParseResult {
-  return {
-    trades: [],
-    metrics: DEMO_METRICS,
-    warnings: [],
-    sourceFormat: "csv",
-  };
-}
 
 function money(value: number): string {
   return value.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " $";
@@ -575,10 +443,6 @@ export default function Home() {
     },
     [],
   );
-  const loadDemo = useCallback(
-    () => applyResult(demoResult(), null),
-    [applyResult],
-  );
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -586,7 +450,7 @@ export default function Home() {
       if (!next) return;
       if (!/\.(csv|html?|txt)$/i.test(next.name)) {
         setParseError(
-          "Format non supporté. Fournissez un export MT5 .csv ou .html.",
+          "Format non supporté. Fournissez un export CSV ou HTML compatible.",
         );
         return;
       }
@@ -602,7 +466,7 @@ export default function Home() {
         .text()
         .then((text) => {
           try {
-            applyResult(parseMT5History(text), next);
+            applyResult(parseUniversalHistory(text), next);
           } catch (error) {
             setParseError(
               error instanceof Error
@@ -734,25 +598,16 @@ export default function Home() {
                       <UploadCloud className="h-6 w-6 transition group-hover:-translate-y-1" />
                     </div>
                     <p className="text-sm font-semibold text-white">
-                      Déposez votre historique MT5
+                      Déposez votre historique de trading
                     </p>
                     <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-                      CSV, HTML ou TXT · 15 Mo maximum
+                      MT4/5, eToro, XTB, Boursorama, Coinbase ou TradingView · CSV / HTML / TXT · 15 Mo maximum
                     </p>
                     <span className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-zinc-950">
                       Choisir un fichier <ArrowRight className="h-3.5 w-3.5" />
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    loadDemo();
-                  }}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-300/20 bg-violet-300/[0.07] px-4 py-3 text-xs font-semibold text-violet-200 transition hover:bg-violet-300/[0.12]"
-                >
-                  <Sparkles className="h-4 w-4" /> Tester avec un exemple
-                </button>
                 <div className="mt-3 flex items-start gap-3 rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.05] p-3 text-xs leading-5 text-emerald-100/80">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
                   <span>
@@ -834,17 +689,19 @@ export default function Home() {
                   Votre cockpit de risque
                 </h2>
                 <p className="mt-2 text-sm text-zinc-500">
-                  {file?.name || "Mode démo interactif"} · {metrics.totalTrades}{" "}
+                  {file?.name || "Historique importé"} · {parseResult.broker ?? "Source détectée"} · {metrics.totalTrades}{" "}
                   transactions · {dateLabel(metrics.startDate)} →{" "}
                   {dateLabel(metrics.endDate)}
                 </p>
               </div>
-              <button
-                onClick={reset}
-                className="hidden items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-400 transition hover:text-white sm:flex"
-              >
-                <X className="h-3.5 w-3.5" /> Effacer
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/20">
+                  <FileText className="h-3.5 w-3.5" /> Exporter l&apos;audit en PDF
+                </button>
+                <button onClick={reset} className="hidden items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-400 transition hover:text-white sm:flex">
+                  <X className="h-3.5 w-3.5" /> Effacer
+                </button>
+              </div>
             </div>
             <nav
               className="sticky top-2 z-20 grid grid-cols-3 rounded-2xl border border-white/10 bg-black/95 p-1 shadow-xl shadow-black/30 backdrop-blur"
@@ -1197,7 +1054,7 @@ export default function Home() {
           <div className="grid gap-8 sm:grid-cols-[1.3fr_1fr_1fr]">
             <div>
               <p className="text-sm font-semibold text-white">
-                Risk &amp; Bias Audit
+                AuditProp
               </p>
               <p className="mt-2 max-w-xs leading-5">
                 Intelligence comportementale et contexte macro pour traders et
@@ -1239,7 +1096,7 @@ export default function Home() {
           </div>
           <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-5">
             <span>
-              © {new Date().getFullYear()} Risk &amp; Bias Audit · SaaS V2
+              © {new Date().getFullYear()} AuditProp · SaaS V2
             </span>
             <span>Analyse de risque, pas conseil financier.</span>
           </div>

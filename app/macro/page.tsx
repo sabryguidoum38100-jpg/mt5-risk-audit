@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Loader2,
   Sparkles,
+  X,
 } from "lucide-react";
 import SiteNav from "@/components/site-nav";
 
@@ -44,6 +45,9 @@ export default function MacroPage() {
   const [impact, setImpact] = useState<Impact>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<CalendarItem | null>(null);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explaining, setExplaining] = useState(false);
   const load = async () => {
     setLoading(true);
     setError(null);
@@ -78,6 +82,15 @@ export default function MacroPage() {
           timeStyle: "short",
         }).format(new Date(value))
       : "Date indisponible";
+  const openEvent = async (item: CalendarItem) => {
+    setSelected(item); setExplanation(null); setExplaining(true);
+    try {
+      const response = await fetch("/api/macro-explain", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: item.title, currency: item.currency, impact: item.impact, summary: item.summary }) });
+      const payload = await response.json();
+      setExplanation(payload.explanation ?? "Analyse IA indisponible pour cet événement.");
+    } catch { setExplanation("Analyse IA indisponible pour cet événement."); }
+    finally { setExplaining(false); }
+  };
   return (
     <main className="min-h-screen bg-black text-zinc-100">
       <SiteNav />
@@ -176,11 +189,10 @@ export default function MacroPage() {
                 </div>
                 {events.length > 0 ? (
                   events.map((item, index) => (
-                    <a
+                    <button
                       key={`${item.link}-${index}`}
-                      href={item.link}
-                      target="_blank"
-                      rel="noreferrer"
+                      type="button"
+                      onClick={() => void openEvent(item)}
                       className="grid gap-2 border-b border-white/[0.07] px-4 py-4 transition last:border-0 hover:bg-white/[0.03] sm:grid-cols-[1.3fr_0.45fr_0.7fr_0.8fr] sm:items-center sm:gap-4"
                     >
                       <div>
@@ -203,7 +215,7 @@ export default function MacroPage() {
                       <span className="text-xs text-zinc-500">
                         {date(item.publishedAt)}
                       </span>
-                    </a>
+                    </button>
                   ))
                 ) : (
                   <div className="p-8 text-center text-sm text-zinc-500">
@@ -217,6 +229,19 @@ export default function MacroPage() {
           </>
         )}
       </div>
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true">
+          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#09090b] p-5 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div><p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Événement live</p><h2 className="mt-2 text-xl font-semibold text-white">{selected.title}</h2></div>
+              <button type="button" onClick={() => setSelected(null)} aria-label="Fermer" className="rounded-xl p-2 text-zinc-500 hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs text-zinc-400"><span className="rounded-full bg-white/5 px-3 py-1.5">{selected.currency ?? "—"}</span><span className={`rounded-full border px-3 py-1.5 ${impactClass[selected.impact]}`}>{selected.impact === "high" ? "🔴 Élevé" : selected.impact === "moderate" ? "🟡 Moyen" : "🟢 Faible"}</span><span className="rounded-full bg-white/5 px-3 py-1.5">{date(selected.publishedAt)}</span></div>
+            <div className="mt-6 rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.05] p-4"><p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Analyse IA</p><p className="mt-3 text-sm leading-6 text-zinc-300">{explaining ? "Analyse en cours…" : explanation ?? "Analyse indisponible."}</p></div>
+            <p className="mt-4 text-xs text-zinc-600">Source : {selected.source}. Les liens bruts d’API ne sont pas ouverts automatiquement.</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

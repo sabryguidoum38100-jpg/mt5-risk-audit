@@ -1,253 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Brain,
-  CheckCircle2,
-  ChevronDown,
-  ShieldCheck,
-  Target,
-  TrendingDown,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, ArrowRight, Brain, CheckCircle2, ChevronDown, Calculator, ShieldCheck, Target, TrendingDown } from "lucide-react";
 import SiteNav from "@/components/site-nav";
 
 const rules = [
-  {
-    title: "Max Daily Loss",
-    icon: TrendingDown,
-    tone: "rose",
-    summary: "La perte maximale autorisée sur une journée de trading.",
-    detail:
-      "Additionnez les pertes réalisées et le flottant de toutes les positions. Une marge de sécurité de 1 à 2 % sous la limite évite qu'un spread ou un mouvement rapide ne transforme une journée acceptable en violation.",
-  },
-  {
-    title: "Max Overall Drawdown",
-    icon: ShieldCheck,
-    tone: "amber",
-    summary: "Le seuil de perte totale à ne jamais franchir.",
-    detail:
-      "Calculez le drawdown depuis le solde ou l'equity de référence imposé par votre firme. Le risque par trade doit être calibré pour survivre à une série de pertes, pas seulement pour viser un rendement quotidien.",
-  },
-  {
-    title: "Consistency Rule",
-    icon: Target,
-    tone: "sky",
-    summary: "La régularité des résultats plutôt qu'un seul gros coup.",
-    detail:
-      "Vérifiez les règles propres à votre programme : certaines firmes limitent la part du meilleur jour ou demandent une distribution régulière des profits. Consultez toujours les conditions officielles de votre compte.",
-  },
-  {
-    title: "Gestion du risque",
-    icon: CheckCircle2,
-    tone: "emerald",
-    summary: "Une unité de risque claire avant chaque entrée.",
-    detail:
-      "Définissez le stop, le montant risqué et le scénario d'invalidation avant l'ordre. Ne déplacez pas le stop pour éviter une perte et réduisez la taille après une séquence défavorable.",
-  },
+  ["Max Daily Loss", "Perte maximale autorisée sur une journée. Additionnez pertes réalisées et flottant; gardez une marge sous la limite."],
+  ["Max Overall Drawdown", "Seuil de perte totale à ne jamais franchir. Calibrez le risque pour survivre à une série défavorable."],
+  ["Consistency Rule", "Certaines firmes limitent la part du meilleur jour ou demandent une distribution régulière des profits. Vérifiez le programme choisi."],
+  ["Gestion du risque", "Définissez le stop, le montant risqué et le scénario d'invalidation avant l'ordre; ne déplacez pas le stop pour éviter une perte."],
 ] as const;
-
-const guides = [
-  {
-    title: "Overtrading",
-    icon: TrendingDown,
-    summary: "Trop de trades, trop peu de sélection.",
-    steps: [
-      "Fixez un nombre maximal de setups par session.",
-      "Exigez une checklist complète avant chaque entrée.",
-      "Fermez la plateforme après votre quota ou votre limite de perte.",
-    ],
-  },
-  {
-    title: "Revenge trading",
-    icon: AlertTriangle,
-    summary: "Réagir à une perte au lieu de suivre le plan.",
-    steps: [
-      "Imposez une pause après une perte hors plan.",
-      "Notez l'émotion et le déclencheur dans votre journal.",
-      "Revenez uniquement avec le même risque prédéfini, jamais avec une taille augmentée.",
-    ],
-  },
-  {
-    title: "Respect du plan",
-    icon: Brain,
-    summary: "Transformer une intention en protocole mesurable.",
-    steps: [
-      "Écrivez les conditions d'entrée et de sortie avant la session.",
-      "Capturez une preuve de chaque décision importante.",
-      "Faites une revue hebdomadaire basée sur les faits, pas sur le résultat d'un trade.",
-    ],
-  },
-];
-const toneClasses = {
-  rose: "bg-rose-300/10 text-rose-300",
-  amber: "bg-amber-300/10 text-amber-300",
-  sky: "bg-sky-300/10 text-sky-300",
-  emerald: "bg-emerald-300/10 text-emerald-300",
-} as const;
+const firms = [
+  { name: "FTMO", daily: 5, total: 10, consistency: "Selon programme" },
+  { name: "Topstep", daily: 5, total: 10, consistency: "Règle de constance" },
+  { name: "Funding Pips", daily: 5, total: 10, consistency: "Selon programme" },
+  { name: "FundedNext", daily: 5, total: 10, consistency: "Selon programme" },
+] as const;
+const checklist = ["Mon setup respecte-t-il mon plan écrit ?", "Le risque monétaire et le stop sont-ils définis ?", "Suis-je émotionnellement neutre après le dernier trade ?", "Ai-je encore de la marge avant ma limite quotidienne ?", "Puis-je expliquer l'invalidation en une phrase ?"];
 
 export default function AcademyPage() {
   const [openRule, setOpenRule] = useState(0);
-  const [openGuide, setOpenGuide] = useState(0);
-  return (
-    <main className="min-h-screen bg-black text-zinc-100">
-      <SiteNav />
-      <div className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
-        <header className="border-b border-white/[0.07] py-12 sm:py-16">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-300">
-            Académie Prop Firm
-          </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-            Maîtriser les règles. Stabiliser le comportement.
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-500">
-            Des guides courts et actionnables pour comprendre les règles de
-            challenge, calibrer le risque et réduire les biais qui détruisent la
-            constance.
-          </p>
-        </header>
-        <section className="py-12">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">
-                Fondamentaux
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">
-                Maîtriser les règles Prop Firm
-              </h2>
-            </div>
-            <span className="hidden text-xs text-zinc-600 sm:block">
-              4 modules interactifs
-            </span>
-          </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {rules.map((rule, index) => {
-              const Icon = rule.icon;
-              const isOpen = openRule === index;
-              return (
-                <article
-                  key={rule.title}
-                  className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"
-                >
-                  <button
-                    onClick={() => setOpenRule(isOpen ? -1 : index)}
-                    className="flex w-full items-start gap-3 text-left"
-                  >
-                    <span
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneClasses[rule.tone]}`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-white">
-                        {rule.title}
-                      </span>
-                      <span className="mt-1 block text-xs leading-5 text-zinc-500">
-                        {rule.summary}
-                      </span>
-                    </span>
-                    {isOpen ? (
-                      <ChevronDown className="mt-1 h-4 w-4 rotate-180 text-zinc-500" />
-                    ) : (
-                      <ChevronDown className="mt-1 h-4 w-4 text-zinc-500" />
-                    )}
-                  </button>
-                  {isOpen && (
-                    <div className="mt-4 border-t border-white/[0.07] pt-4 text-sm leading-6 text-zinc-400">
-                      {rule.detail}
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
-        <section className="border-t border-white/[0.07] py-12">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300">
-                Discipline
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">
-                Gestion des Biais Comportementaux
-              </h2>
-            </div>
-            <span className="hidden text-xs text-zinc-600 sm:block">
-              Guides pratiques
-            </span>
-          </div>
-          <div className="mt-6 space-y-3">
-            {guides.map((guide, index) => {
-              const Icon = guide.icon;
-              const isOpen = openGuide === index;
-              return (
-                <article
-                  key={guide.title}
-                  className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"
-                >
-                  <button
-                    onClick={() => setOpenGuide(isOpen ? -1 : index)}
-                    className="flex w-full items-center gap-3 text-left"
-                  >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-300/10 text-violet-300">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="flex-1">
-                      <span className="block text-sm font-semibold text-white">
-                        {guide.title}
-                      </span>
-                      <span className="mt-1 block text-xs text-zinc-500">
-                        {guide.summary}
-                      </span>
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 text-zinc-500 transition ${isOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  {isOpen && (
-                    <ol className="mt-4 space-y-3 border-t border-white/[0.07] pt-4">
-                      {guide.steps.map((step, stepIndex) => (
-                        <li
-                          key={step}
-                          className="flex gap-3 text-sm leading-6 text-zinc-400"
-                        >
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-300/10 text-[10px] font-semibold text-violet-300">
-                            {stepIndex + 1}
-                          </span>
-                          {step}
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
-        <div className="rounded-3xl border border-emerald-300/15 bg-emerald-300/[0.05] p-5 sm:p-7">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
-            <div>
-              <h3 className="text-sm font-semibold text-white">
-                Votre protocole de survie
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-zinc-400">
-                Une règle n'est utile que si elle est transformée en limite
-                opérationnelle : risque fixe, pause après perte et revue
-                documentée. Utilisez l&apos;Audit MT5 pour vérifier vos
-                comportements sur des données réelles.
-              </p>
-              <a
-                href="/"
-                className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-emerald-300 hover:text-emerald-200"
-              >
-                Analyser mon historique <ArrowRight className="h-3.5 w-3.5" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+  const [capital, setCapital] = useState(10000);
+  const [risk, setRisk] = useState(1);
+  const [stop, setStop] = useState(20);
+  const [pipValue, setPipValue] = useState(10);
+  const [firmFilter, setFirmFilter] = useState("Toutes");
+  const [checked, setChecked] = useState<boolean[]>(Array(checklist.length).fill(false));
+  const positionSize = useMemo(() => stop > 0 ? (capital * risk / 100) / (stop * pipValue) : 0, [capital, risk, stop, pipValue]);
+  return <main className="min-h-screen bg-[#09090b] text-zinc-100"><SiteNav /><div className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
+    <header className="border-b border-white/[0.07] py-12 sm:py-16"><p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-400">Académie Prop Firm</p><h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">Maîtriser les règles. Stabiliser le comportement.</h1><p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-500">Outils interactifs et guides pour calibrer le risque à partir de vos choix réels, sans chiffres fictifs ni promesse de rendement.</p></header>
+    <section className="grid gap-4 py-10 lg:grid-cols-[1.1fr_0.9fr]"><div className="rounded-3xl border border-emerald-400/15 bg-emerald-400/[0.04] p-5 sm:p-7"><div className="flex items-center gap-2 text-sm font-semibold text-white"><Calculator className="h-4 w-4 text-emerald-400" /> Calculateur de taille de position</div><p className="mt-2 text-xs leading-5 text-zinc-500">Formule indicative: montant risqué ÷ (stop en pips × valeur d’un pip par lot).</p><div className="mt-6 grid gap-3 sm:grid-cols-2">{[["Capital", capital, setCapital, 1000],["Risque (%)", risk, setRisk, 0.1],["Stop (pips)", stop, setStop, 1],["Valeur pip / lot", pipValue, setPipValue, 0.1]].map(([label, value, setter, step]) => <label key={label as string} className="text-xs text-zinc-500">{label as string}<input type="number" min="0" step={step as number} value={value as number} onChange={e => (setter as (v: number) => void)(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-3 py-3 text-sm text-white outline-none focus:border-emerald-400" /></label>)}</div><div className="mt-5 rounded-2xl border border-white/10 bg-black/40 p-4"><p className="text-xs text-zinc-500">Montant risqué</p><p className="mt-1 text-2xl font-semibold text-emerald-400">{(capital * risk / 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €</p><p className="mt-3 text-xs text-zinc-500">Taille théorique</p><p className="mt-1 text-3xl font-semibold text-white">{positionSize.toFixed(2)} lot(s)</p></div></div>
+      <div className="rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">Checklist pré-session</p><h2 className="mt-2 text-2xl font-semibold text-white">Puis-je prendre ce trade ?</h2><div className="mt-5 space-y-2">{checklist.map((item, i) => <label key={item} className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.07] p-3 text-sm text-zinc-300"><input type="checkbox" checked={checked[i]} onChange={e => setChecked(prev => prev.map((v, j) => j === i ? e.target.checked : v))} className="mt-0.5 accent-emerald-400" />{item}</label>)}</div><p className={`mt-5 text-xs font-semibold ${checked.every(Boolean) ? "text-emerald-400" : "text-amber-300"}`}>{checked.filter(Boolean).length}/{checklist.length} conditions validées</p></div></section>
+    <section className="border-t border-white/[0.07] py-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400">Comparatif</p><h2 className="mt-2 text-2xl font-semibold text-white">Règles des principales Prop Firms</h2></div><select value={firmFilter} onChange={e => setFirmFilter(e.target.value)} className="rounded-xl border border-white/10 bg-black px-3 py-2 text-xs text-white"><option>Toutes</option>{firms.map(f => <option key={f.name}>{f.name}</option>)}</select></div><div className="mt-5 overflow-x-auto rounded-2xl border border-white/[0.08]"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-white/[0.03] text-xs uppercase tracking-wider text-zinc-600"><tr><th className="p-4">Firm</th><th className="p-4">Daily loss</th><th className="p-4">Overall DD</th><th className="p-4">Consistance</th></tr></thead><tbody>{firms.filter(f => firmFilter === "Toutes" || f.name === firmFilter).map(f => <tr key={f.name} className="border-t border-white/[0.07]"><td className="p-4 font-semibold text-white">{f.name}</td><td className="p-4 text-rose-300">{f.daily}%</td><td className="p-4 text-rose-300">{f.total}%</td><td className="p-4 text-zinc-400">{f.consistency}</td></tr>)}</tbody></table></div><p className="mt-3 text-xs text-zinc-600">Valeurs indicatives à confirmer dans les conditions officielles du programme et du compte sélectionné.</p></section>
+    <section className="border-t border-white/[0.07] py-10"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">Fondamentaux</p><h2 className="mt-2 text-2xl font-semibold text-white">Maîtriser les règles</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{rules.map(([title, detail], i) => <article key={title} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"><button onClick={() => setOpenRule(openRule === i ? -1 : i)} className="flex w-full items-center gap-3 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-400"><ShieldCheck className="h-4 w-4" /></span><span className="flex-1 text-sm font-semibold text-white">{title}</span><ChevronDown className={`h-4 w-4 text-zinc-500 ${openRule === i ? "rotate-180" : ""}`} /></button>{openRule === i && <p className="mt-4 border-t border-white/[0.07] pt-4 text-sm leading-6 text-zinc-400">{detail}</p>}</article>)}</div></section>
+    <div className="rounded-3xl border border-emerald-400/15 bg-emerald-400/[0.04] p-5 sm:p-7"><div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" /><div><h3 className="text-sm font-semibold text-white">Données d’abord</h3><p className="mt-2 text-sm leading-6 text-zinc-400">Importez un historique réel pour obtenir un audit personnalisé; l’Académie ne fabrique pas de performance lorsque vos données sont absentes.</p><a href="/" className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-emerald-400">Analyser mon historique <ArrowRight className="h-3.5 w-3.5" /></a></div></div></div>
+  </div></main>;
 }

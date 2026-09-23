@@ -172,9 +172,7 @@ export default function MacroSection() {
                     data.calendar.slice(0, 5).map((item, index) => (
                       <a
                         key={`${item.link}-${index}`}
-                        href={item.link}
-                        target="_blank"
-                        rel="noreferrer"
+                        href="/macro"
                         className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-black/30 p-3 transition hover:border-amber-300/30"
                       >
                         <span className="min-w-0">

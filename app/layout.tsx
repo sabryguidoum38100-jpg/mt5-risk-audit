@@ -5,15 +5,16 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Risk & Bias Audit — Prop Firm Intelligence",
+  title: "AuditProp — Prop Firm Intelligence",
   description:
     "Analyse comportementale IA et protection drawdown pour les challenges Prop Firm.",
+  icons: { icon: "/icon" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className="dark">
-      <body className={`${inter.variable} bg-black font-sans text-zinc-100 antialiased`}>
+      <body className={`${inter.variable} bg-[#09090b] font-sans text-zinc-100 antialiased`}>
         {children}
       </body>
     </html>

@@ -95,6 +95,7 @@ export interface MT5ParseResult {
   metrics: MT5Metrics;
   warnings: string[];
   sourceFormat: "csv" | "html";
+  broker?: "MT4/MT5" | "eToro" | "XTB" | "Boursorama" | "Coinbase" | "TradingView" | "Generic CSV";
 }
 
 export class MT5ParserError extends Error {
@@ -124,7 +125,7 @@ type HeaderRole =
   | "takeProfit";
 
 const HEADER_ALIASES: Record<HeaderRole, string[]> = {
-  ticket: ["ticket", "deal", "position", "order", "#", "id"],
+  ticket: ["ticket", "deal", "position", "order", "trade id", "transaction id", "#", "id"],
   time: [
     "open time",
     "close time",
@@ -132,12 +133,12 @@ const HEADER_ALIASES: Record<HeaderRole, string[]> = {
     "heure de cloture",
     "heure",
     "date",
-    "time",
+    "time", "open date", "close date", "timestamp", "created at", "filled at",
   ],
-  type: ["type", "direction", "sens"],
-  volume: ["volume", "lots", "lot", "size", "taille"],
-  symbol: ["symbol", "symbole", "instrument", "pair", "paire"],
-  price: ["open price", "prix d'ouverture", "price", "prix"],
+  type: ["type", "direction", "sens", "side", "action", "order type"],
+  volume: ["volume", "lots", "lot", "size", "taille", "qty", "quantity", "amount", "units"],
+  symbol: ["symbol", "symbole", "instrument", "pair", "paire", "asset", "market", "product"],
+  price: ["open price", "entry price", "prix d'ouverture", "price", "prix", "execution price"],
   profit: [
     "profit",
     "p/l",
@@ -146,7 +147,7 @@ const HEADER_ALIASES: Record<HeaderRole, string[]> = {
     "gain/perte",
     "resultat",
     "result",
-    "net profit",
+    "net profit", "net p&l", "pnl", "p/l net", "realized p&l", "realized pnl", "gain", "loss", "montant",
   ],
   stopLoss: ["stop loss", "stoploss", "sl", "stop-loss"],
   takeProfit: ["take profit", "takeprofit", "tp", "take-profit"],
@@ -176,6 +177,17 @@ function normalize(str: string): string {
     .replace(/[\u0300-\u036f]/g, "") // retire les accents
     .toLowerCase()
     .trim();
+}
+
+function detectBroker(raw: string): MT5ParseResult["broker"] {
+  const text = raw.slice(0, 12000).toLowerCase();
+  if (/metatrader|mt4|mt5|mql5/.test(text)) return "MT4/MT5";
+  if (/etoro/.test(text)) return "eToro";
+  if (/xtb|x-trade/.test(text)) return "XTB";
+  if (/boursorama/.test(text)) return "Boursorama";
+  if (/coinbase|crypto/.test(text)) return "Coinbase";
+  if (/tradingview/.test(text)) return "TradingView";
+  return "Generic CSV";
 }
 
 function parseNumber(raw: string | undefined): number {
@@ -768,5 +780,9 @@ export function parseMT5History(rawContent: string): MT5ParseResult {
     metrics,
     warnings,
     sourceFormat: isHTML ? "html" : "csv",
+    broker: detectBroker(rawContent),
   };
 }
+
+/** Même moteur déterministe, nommé explicitement pour l'import multi-sources. */
+export const parseUniversalHistory = parseMT5History;
