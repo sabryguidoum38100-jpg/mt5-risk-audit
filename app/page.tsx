@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -150,6 +150,36 @@ function dateLabel(value: string | null): string {
         year: "numeric",
       })
     : "";
+}
+
+function LiveBadge({ label, online = true }: { label: string; online?: boolean }) {
+  return <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-semibold ${online ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300" : "border-rose-400/20 bg-rose-400/10 text-rose-300"}`}><span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`} />{label}</span>;
+}
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div aria-hidden="true" className={`skeleton-shimmer rounded-xl ${className}`} />;
+}
+
+function deriveInsights(trades: MT5ParseResult["trades"]) {
+  const bySymbol = new Map<string, number>();
+  const byWeekday = new Map<string, number>();
+  const bySession = new Map<string, number>();
+  const sessionFor = (hour: number) => hour >= 8 && hour < 13 ? "Londres" : hour >= 13 && hour < 21 ? "New York" : "Asie";
+  for (const trade of trades) {
+    bySymbol.set(trade.symbol, (bySymbol.get(trade.symbol) ?? 0) + trade.profit);
+    const day = new Intl.DateTimeFormat("fr-FR", { weekday: "long" }).format(trade.openTime);
+    byWeekday.set(day, (byWeekday.get(day) ?? 0) + trade.profit);
+    const session = sessionFor(trade.openTime.getHours());
+    bySession.set(session, (bySession.get(session) ?? 0) + trade.profit);
+  }
+  const sorted = (map: Map<string, number>) => [...map.entries()].sort((a, b) => b[1] - a[1]);
+  const pairs = sorted(bySymbol);
+  const worstDay = [...byWeekday.entries()].sort((a, b) => a[1] - b[1])[0];
+  return { profitablePair: pairs[0] ?? null, toxicPair: pairs[pairs.length - 1] ?? null, worstDay: worstDay ?? null, bestSession: sorted(bySession)[0] ?? null };
+}
+
+function InsightCard({ label, value, detail, tone = "neutral" }: { label: string; value: string; detail: string; tone?: "good" | "bad" | "neutral" }) {
+  return <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 transition duration-300 hover:-translate-y-0.5 hover:border-emerald-400/20"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{label}</p><p className={`mt-3 truncate text-base font-semibold ${tone === "good" ? "text-emerald-300" : tone === "bad" ? "text-rose-300" : "text-white"}`}>{value}</p><p className="mt-1 text-xs text-zinc-500">{detail}</p></div>;
 }
 
 function StatCard({
@@ -409,6 +439,7 @@ export default function Home() {
     "cockpit",
   );
   const [planExpanded, setPlanExpanded] = useState(false);
+  const [chartRange, setChartRange] = useState<"all" | "7" | "30" | "90">("all");
 
   const handleAnalyze = useCallback(async (metrics: MT5Metrics) => {
     setIsAnalyzing(true);
@@ -471,8 +502,8 @@ export default function Home() {
           } catch (error) {
             setParseError(
               error instanceof Error
-                ? error.message
-                : "Impossible de parser ce fichier.",
+                ? `${error.message} Exportez à nouveau l'historique en CSV UTF-8 ou en HTML depuis votre broker, puis réessayez.`
+                : "Impossible de parser ce fichier. Exportez à nouveau l'historique en CSV UTF-8 ou en HTML depuis votre broker.",
             );
           }
         })
@@ -498,6 +529,11 @@ export default function Home() {
     if (inputRef.current) inputRef.current.value = "";
   };
   const metrics = parseResult?.metrics;
+  const insights = useMemo(() => parseResult ? deriveInsights(parseResult.trades) : null, [parseResult]);
+  const visibleEquity = useMemo(() => {
+    if (!metrics || chartRange === "all") return metrics?.equityCurve ?? [];
+    return metrics.equityCurve.slice(-Number(chartRange));
+  }, [metrics, chartRange]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-black text-zinc-100">
@@ -526,6 +562,8 @@ export default function Home() {
             </button>
           )}
         </header>
+
+        {!parseResult && <div className="flex flex-wrap gap-2 border-b border-white/[0.07] py-3"><LiveBadge label="Flux FXMacroData : Connecté" /><LiveBadge label="Groq AI Engine : En ligne" /></div>}
 
         {!parseResult && (
           <>
@@ -694,6 +732,7 @@ export default function Home() {
                   transactions · {dateLabel(metrics.startDate)} →{" "}
                   {dateLabel(metrics.endDate)}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2"><LiveBadge label="Flux FXMacroData : Connecté" /><LiveBadge label={isAnalyzing ? "Groq AI Engine : Analyse" : "Groq AI Engine : En ligne"} /></div>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/20">
@@ -757,6 +796,7 @@ export default function Home() {
             )}
             {activeTab === "cockpit" && (
               <>
+                {insights && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><InsightCard label="Paire la plus rentable" value={insights.profitablePair?.[0] ?? "Donnée insuffisante"} detail={insights.profitablePair ? `${signed(insights.profitablePair[1])} $ net` : "Importez plusieurs trades"} tone="good" /><InsightCard label="Paire la plus toxique" value={insights.toxicPair?.[0] ?? "Donnée insuffisante"} detail={insights.toxicPair ? `${signed(insights.toxicPair[1])} $ net` : "Importez plusieurs trades"} tone="bad" /><InsightCard label="Pire jour de la semaine" value={insights.worstDay?.[0] ?? "Donnée insuffisante"} detail={insights.worstDay ? `${signed(insights.worstDay[1])} $ cumulé` : "Données insuffisantes"} tone="bad" /><InsightCard label="Session la plus performante" value={insights.bestSession?.[0] ?? "Donnée insuffisante"} detail={insights.bestSession ? `${signed(insights.bestSession[1])} $ cumulé` : "Données insuffisantes"} tone="good" /></div>}
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   <StatCard
                     label="P&L total"
@@ -798,7 +838,7 @@ export default function Home() {
                 <ChartistPanel result={parseResult} />
                 <div className="grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/10">
-                    <div className="mb-5 flex items-center justify-between">
+                      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <h3 className="text-sm font-semibold text-white">
                           Courbe de capital
@@ -807,13 +847,11 @@ export default function Home() {
                           Évolution de l&apos;equity par transaction
                         </p>
                       </div>
-                      <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-400">
-                        {metrics.symbolsTraded.join(" · ")}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-400">{metrics.symbolsTraded.join(" · ")}</span><div className="flex rounded-lg border border-white/10 p-0.5">{(["all", "7", "30", "90"] as const).map((range) => <button key={range} type="button" onClick={() => setChartRange(range)} className={`rounded-md px-2 py-1 text-[10px] ${chartRange === range ? "bg-emerald-400 text-black" : "text-zinc-500 hover:text-white"}`}>{range === "all" ? "Tout" : `${range} tr`}</button>)}</div></div>
                     </div>
                     <ResponsiveContainer width="100%" height={310}>
                       <AreaChart
-                        data={metrics.equityCurve}
+                        data={visibleEquity}
                         margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
                       >
                         <defs>
@@ -896,15 +934,7 @@ export default function Home() {
                       </div>
                     </div>
                     {isAnalyzing && (
-                      <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-sky-300" />
-                        <p className="text-sm text-zinc-300">
-                          Analyse Groq en cours…
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Vos métriques restent déterministes.
-                        </p>
-                      </div>
+                      <div className="min-h-[240px] space-y-4 pt-4"><Skeleton className="h-8 w-24" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" /><div className="pt-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-sky-300" /><p className="mt-3 text-sm text-zinc-300">Analyse Groq en cours…</p><p className="mt-1 text-xs text-zinc-500">Vos métriques restent déterministes.</p></div></div>
                     )}
                     {!isAnalyzing && analysisError && (
                       <div className="space-y-3">

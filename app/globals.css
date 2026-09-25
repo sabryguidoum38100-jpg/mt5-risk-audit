@@ -8,3 +8,15 @@ html, body { background-color: #09090b; min-height: 100%; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #09090b; }
 ::-webkit-scrollbar-thumb { background-color: #27272a; border-radius: 9999px; }
+
+.skeleton-shimmer {
+  background: linear-gradient(110deg, #18181b 8%, #27272a 18%, #18181b 33%);
+  background-size: 200% 100%;
+  animation: auditprop-shimmer 1.6s linear infinite;
+}
+
+@keyframes auditprop-shimmer { to { background-position-x: -200%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

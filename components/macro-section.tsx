@@ -133,10 +133,7 @@ export default function MacroSection() {
           </button>
         </div>
         {loading && (
-          <div className="mt-8 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-zinc-400">
-            <Loader2 className="h-4 w-4 animate-spin text-sky-300" /> Connexion
-            aux flux CNBC, Yahoo Finance et Forex Factory…
-          </div>
+          <div className="mt-8 space-y-4"><div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-zinc-400"><Loader2 className="h-4 w-4 animate-spin text-sky-300" />Connexion aux flux financiers réels…</div><div className="grid gap-4 lg:grid-cols-2"><div className="skeleton-shimmer h-52 rounded-3xl" /><div className="skeleton-shimmer h-52 rounded-3xl" /></div></div>
         )}
         {error && (
           <div className="mt-8 flex items-start gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-4 text-sm text-rose-200">

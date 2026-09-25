@@ -39,6 +39,10 @@ const impactClass = {
   low: "border-sky-300/20 bg-sky-300/10 text-sky-200",
 } as const;
 
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div aria-hidden="true" className={`skeleton-shimmer rounded-xl ${className}`} />;
+}
+
 export default function MacroPage() {
   const [data, setData] = useState<MacroPayload | null>(null);
   const [currency, setCurrency] = useState("all");
@@ -108,6 +112,7 @@ export default function MacroPage() {
               publics réels. Aucun événement fictif n&apos;est injecté dans
               cette vue.
             </p>
+            <div className="mt-4 flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-semibold text-emerald-300"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Flux FXMacroData : Connecté</span><span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-semibold text-emerald-300"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Groq AI Engine : En ligne</span></div>
           </div>
           <button
             onClick={() => void load()}
@@ -123,10 +128,7 @@ export default function MacroPage() {
           </div>
         )}
         {loading && (
-          <div className="mt-8 flex items-center gap-3 text-sm text-zinc-500">
-            <Loader2 className="h-4 w-4 animate-spin text-sky-300" />{" "}
-            Récupération du calendrier économique réel…
-          </div>
+          <div className="mt-8 space-y-4"><div className="flex items-center gap-3 text-sm text-zinc-500"><Loader2 className="h-4 w-4 animate-spin text-sky-300" />Récupération des flux économiques réels…</div><div className="grid gap-4 lg:grid-cols-2"><Skeleton className="h-44" /><Skeleton className="h-44" /></div><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
         )}
         {data && (
           <>
