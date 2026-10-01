@@ -137,6 +137,16 @@ function FAQSection() {
   );
 }
 
+function ProductProofSection() {
+  const proofPoints = [
+    ["Données locales d’abord", "Les transactions brutes restent dans le navigateur. Le moteur comportemental reçoit uniquement les métriques agrégées nécessaires à l’interprétation.", ShieldCheck],
+    ["Calculs explicables", "PnL, drawdown, heatmap, holding time, swings et projections sont calculés par des fonctions déterministes avant toute synthèse IA.", Gauge],
+    ["Contexte réellement vivant", "Le calendrier et les flux macro sont récupérés depuis des sources publiques. Si un flux manque, l’interface affiche un état vide plutôt qu’un chiffre inventé.", Activity],
+    ["Décision, pas prédiction", "La roadmap croise historique, structure de prix et contexte économique pour cadrer l’action — sans promesse de rendement.", Brain],
+  ] as const;
+  return <section className="border-t border-white/[0.07] py-14"><div className="mx-auto max-w-4xl text-center"><p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Pourquoi AuditProp</p><h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">Un système de décision que vous pouvez comprendre.</h2><p className="mt-4 text-sm leading-6 text-zinc-500">Une architecture pensée pour réduire le bruit, rendre les risques visibles et préserver la confiance entre votre historique et l’analyse.</p></div><div className="mx-auto mt-8 grid max-w-5xl gap-3 sm:grid-cols-2">{proofPoints.map(([title, text, Icon]) => <article key={title} className="neon-card rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><Icon className="h-4 w-4" /></span><h3 className="text-sm font-semibold text-white">{title}</h3></div><p className="mt-3 text-xs leading-5 text-zinc-500">{text}</p></article>)}</div></section>;
+}
+
 const FIRM_RULES: Record<
   PropFirm,
   { tagline: string; daily: number; total: number }
@@ -612,8 +622,7 @@ export default function Home() {
             <section className="grid items-center gap-12 py-16 lg:grid-cols-[1.08fr_0.92fr] lg:py-24">
               <div>
                 <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-300/[0.07] px-3 py-1.5 text-xs font-medium text-sky-200">
-                  <Sparkles className="h-3.5 w-3.5" /> Intelligence
-                  comportementale pour traders
+                  <Sparkles className="h-3.5 w-3.5" /> Trading OS · moteur de décision IA
                 </div>
                 <h1 className="max-w-3xl text-4xl font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl">
                   Transformez votre historique de trading en{" "}
@@ -663,8 +672,15 @@ export default function Home() {
                     handleFiles(event.dataTransfer.files);
                   }}
                   onClick={() => inputRef.current?.click()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      inputRef.current?.click();
+                    }
+                  }}
                   role="button"
                   tabIndex={0}
+                  aria-label="Importer un historique de trading"
                   className={`group cursor-pointer rounded-3xl border p-5 shadow-2xl shadow-black/20 transition ${isDragging ? "border-sky-300/60 bg-sky-300/[0.08]" : "border-white/[0.12] bg-white/[0.045] hover:border-sky-300/30 hover:bg-white/[0.06]"}`}
                 >
                   <input
@@ -753,6 +769,7 @@ export default function Home() {
                 ))}
               </div>
             </section>
+            <ProductProofSection />
             <MacroSection />
             <FAQSection />
           </>
