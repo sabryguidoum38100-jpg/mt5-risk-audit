@@ -186,8 +186,10 @@ function deriveInsights(trades: MT5ParseResult["trades"]) {
   }
   const sorted = (map: Map<string, number>) => [...map.entries()].sort((a, b) => b[1] - a[1]);
   const pairs = sorted(bySymbol);
+  const profitablePairs = pairs.filter(([, profit]) => profit > 0);
   const worstDay = [...byWeekday.entries()].sort((a, b) => a[1] - b[1])[0];
-  return { profitablePair: pairs[0] ?? null, toxicPair: pairs[pairs.length - 1] ?? null, worstDay: worstDay ?? null, bestSession: sorted(bySession)[0] ?? null };
+  const sessions = sorted(bySession);
+  return { profitablePair: profitablePairs[0] ?? null, toxicPair: pairs[pairs.length - 1] ?? null, worstDay: worstDay ?? null, bestSession: sessions.find(([, profit]) => profit > 0) ?? null };
 }
 
 function InsightCard({ label, value, detail, tone = "neutral" }: { label: string; value: string; detail: string; tone?: "good" | "bad" | "neutral" }) {
@@ -589,7 +591,7 @@ export default function Home() {
                     AuditProp Trading OS
               </p>
               <p className="text-[11px] text-zinc-500">
-                MT5 intelligence for Prop Firms
+                Decision intelligence for every trader
               </p>
             </div>
           </div>
@@ -614,15 +616,15 @@ export default function Home() {
                   comportementale pour traders
                 </div>
                 <h1 className="max-w-3xl text-4xl font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-6xl">
-                  Transformez votre historique MT5 en{" "}
+                  Transformez votre historique de trading en{" "}
                   <span className="bg-gradient-to-r from-sky-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
                     avantage de survie.
                   </span>
                 </h1>
                 <p className="mt-6 max-w-xl text-base leading-7 text-zinc-400 sm:text-lg">
                   Analyse comportementale IA, protection contre le drawdown et
-                  lecture claire de vos biais pour réussir vos challenges Prop
-                  Firms avec plus de discipline.
+                  lecture claire de vos biais pour prendre de meilleures
+                  décisions, actif après actif, session après session.
                 </p>
                 <div className="mt-7 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                   <span className="mr-1 font-medium text-zinc-400">
@@ -691,7 +693,7 @@ export default function Home() {
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
                   <span>
                     Vos données de trading ne sont jamais stockées sur nos
-                    serveurs. L&apos;analyse des métriques est effectuée
+                    serveurs. L’analyse des métriques est effectuée
                     localement dans votre navigateur.
                   </span>
                 </div>
@@ -708,7 +710,7 @@ export default function Home() {
                   Comment ça marche
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
-                  De l&apos;historique brut à une décision plus lucide
+                  De l’historique brut à une décision plus lucide
                 </h2>
               </div>
               <div className="mt-8 grid gap-3 md:grid-cols-3">
@@ -717,14 +719,14 @@ export default function Home() {
                     ["01", "Exporte ton rapport MT5", "CSV / HTML", Download],
                     [
                       "02",
-                      "L&apos;IA détecte tes biais",
+                      "L’IA détecte tes biais",
                       "Biais comportementaux et drawdown analysés",
                       ScanSearch,
                     ],
                     [
                       "03",
                       "Sécurise tes challenges",
-                      "Ajuste ton plan de trading pour tes Prop Firms",
+                      "Ajuste ton plan de trading avec des décisions mesurées",
                       ShieldCheck,
                     ],
                   ] as const
@@ -776,7 +778,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-400/20">
-                  <FileText className="h-3.5 w-3.5" /> Exporter l&apos;audit en PDF
+                  <FileText className="h-3.5 w-3.5" /> Exporter l’audit en PDF
                 </button>
                 <button onClick={reset} className="hidden items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-400 transition hover:text-white sm:flex">
                   <X className="h-3.5 w-3.5" /> Effacer
@@ -838,7 +840,7 @@ export default function Home() {
             )}
             {activeTab === "cockpit" && (
               <>
-                {insights && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><InsightCard label="Paire la plus rentable" value={insights.profitablePair?.[0] ?? "Donnée insuffisante"} detail={insights.profitablePair ? `${signed(insights.profitablePair[1])} $ net` : "Importez plusieurs trades"} tone="good" /><InsightCard label="Paire la plus toxique" value={insights.toxicPair?.[0] ?? "Donnée insuffisante"} detail={insights.toxicPair ? `${signed(insights.toxicPair[1])} $ net` : "Importez plusieurs trades"} tone="bad" /><InsightCard label="Pire jour de la semaine" value={insights.worstDay?.[0] ?? "Donnée insuffisante"} detail={insights.worstDay ? `${signed(insights.worstDay[1])} $ cumulé` : "Données insuffisantes"} tone="bad" /><InsightCard label="Session la plus performante" value={insights.bestSession?.[0] ?? "Donnée insuffisante"} detail={insights.bestSession ? `${signed(insights.bestSession[1])} $ cumulé` : "Données insuffisantes"} tone="good" /></div>}
+                {insights && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><InsightCard label={insights.profitablePair ? "Paire la plus rentable" : "Aucune paire rentable"} value={insights.profitablePair?.[0] ?? "Aucune donnée positive"} detail={insights.profitablePair ? `${signed(insights.profitablePair[1])} $ net` : "Aucun PnL positif sur l'import"} tone={insights.profitablePair ? "good" : "neutral"} /><InsightCard label="Paire la plus déficitaire" value={insights.toxicPair?.[0] ?? "Donnée insuffisante"} detail={insights.toxicPair ? `${signed(insights.toxicPair[1])} $ net` : "Importez plusieurs trades"} tone="bad" /><InsightCard label="Pire jour de la semaine" value={insights.worstDay?.[0] ?? "Donnée insuffisante"} detail={insights.worstDay ? `${signed(insights.worstDay[1])} $ cumulé` : "Données insuffisantes"} tone="bad" /><InsightCard label={insights.bestSession ? "Session positive" : "Aucune session positive"} value={insights.bestSession?.[0] ?? "Aucune donnée positive"} detail={insights.bestSession ? `${signed(insights.bestSession[1])} $ cumulé` : "Aucun PnL positif sur l'import"} tone={insights.bestSession ? "good" : "neutral"} /></div>}
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   <StatCard
                     label="P&L total"
@@ -883,7 +885,7 @@ export default function Home() {
                 {advanced && <ConsistencyCheck analytics={advanced} />}
                 {advanced && monteCarlo && <div className="grid gap-4 lg:grid-cols-2"><MonteCarloPanel projection={monteCarlo} /><TradeTagging trades={parseResult.trades} /></div>}
                 {advanced && <StrategyRoadmap result={parseResult} metrics={metrics} advanced={advanced} />}
-                <section className="rounded-3xl border border-violet-400/15 bg-violet-400/[0.04] p-4 shadow-2xl shadow-black/10 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-violet-300" /> Diagnostic IA global</div><p className="mt-1 text-xs text-zinc-500">Une synthèse Groq basée uniquement sur les métriques agrégées.</p></div><button type="button" onClick={() => void generateGlobalAudit()} disabled={isGeneratingAudit} className="inline-flex items-center gap-2 rounded-xl bg-violet-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-violet-200 disabled:opacity-50">{isGeneratingAudit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Générer l&apos;Audit IA</button></div>{globalAuditError && <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-200">{globalAuditError}</p>}{globalAudit && <div className="mt-5 space-y-5"><p className="text-sm leading-6 text-zinc-300">{globalAudit.summary}</p><div className="grid gap-4 md:grid-cols-3">{[["Forces", globalAudit.strengths, "text-emerald-300"], ["Faiblesses", globalAudit.weaknesses, "text-rose-300"], ["Plan d'action", globalAudit.actionPlan, "text-sky-300"]].map(([title, items, tone]) => <div key={title as string} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><h4 className={`text-xs font-semibold uppercase tracking-wider ${tone as string}`}>{title as string}</h4><ul className="mt-3 space-y-2 text-xs leading-5 text-zinc-400">{(items as string[]).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>)}</div></div>}</section>
+                <section className="rounded-3xl border border-violet-400/15 bg-violet-400/[0.04] p-4 shadow-2xl shadow-black/10 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-violet-300" /> Diagnostic IA global</div><p className="mt-1 text-xs text-zinc-500">Une synthèse Groq basée uniquement sur les métriques agrégées.</p></div><button type="button" onClick={() => void generateGlobalAudit()} disabled={isGeneratingAudit} className="inline-flex items-center gap-2 rounded-xl bg-violet-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-violet-200 disabled:opacity-50">{isGeneratingAudit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Générer l’Audit IA</button></div>{globalAuditError && <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-200">{globalAuditError}</p>}{globalAudit && <div className="mt-5 space-y-5"><p className="text-sm leading-6 text-zinc-300">{globalAudit.summary}</p><div className="grid gap-4 md:grid-cols-3">{[["Forces", globalAudit.strengths, "text-emerald-300"], ["Faiblesses", globalAudit.weaknesses, "text-rose-300"], ["Plan d'action", globalAudit.actionPlan, "text-sky-300"]].map(([title, items, tone]) => <div key={title as string} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><h4 className={`text-xs font-semibold uppercase tracking-wider ${tone as string}`}>{title as string}</h4><ul className="mt-3 space-y-2 text-xs leading-5 text-zinc-400">{(items as string[]).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>)}</div></div>}</section>
                 <div className="grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/10">
                       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -892,7 +894,7 @@ export default function Home() {
                           Courbe de capital
                         </h3>
                         <p className="mt-1 text-xs text-zinc-500">
-                          Évolution de l&apos;equity par transaction
+                          Évolution de l’equity par transaction
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-400">{metrics.symbolsTraded.join(" · ")}</span><div className="flex rounded-lg border border-white/10 p-0.5">{(["all", "7", "30", "90"] as const).map((range) => <button key={range} type="button" onClick={() => setChartRange(range)} className={`rounded-md px-2 py-1 text-[10px] ${chartRange === range ? "bg-emerald-400 text-black" : "text-zinc-500 hover:text-white"}`}>{range === "all" ? "Tout" : `${range} tr`}</button>)}</div></div>
@@ -1091,7 +1093,7 @@ export default function Home() {
                   <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-4 sm:p-6">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold text-white">
-                        Plan d&apos;action
+                        Plan d’action
                       </h3>
                       <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
                         {analysis.recommendations.length} étapes
@@ -1138,8 +1140,8 @@ export default function Home() {
                 <span>AuditProp</span>
               </div>
               <p className="mt-2 max-w-xs leading-5">
-                Intelligence comportementale et contexte macro pour traders et
-                challenges Prop Firm.
+                Trading OS universel : comportement, contexte macro et décision
+                mesurée pour chaque marché.
               </p>
             </div>
             <div>
@@ -1154,13 +1156,13 @@ export default function Home() {
                   Politique de confidentialité
                 </a>
                 <a href="#cgu" className="block hover:text-white">
-                  CGU / Conditions d&apos;utilisation
+                  CGU / Conditions d’utilisation
                 </a>
               </div>
             </div>
             <div>
               <p className="font-semibold uppercase tracking-wider text-zinc-300">
-                Besoin d&apos;aide ?
+                Besoin d’aide ?
               </p>
               <div className="mt-3 space-y-2">
                 <a

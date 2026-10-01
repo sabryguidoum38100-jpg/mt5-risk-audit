@@ -109,7 +109,7 @@ export default function MacroPage() {
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500">
               Calendrier économique dynamique et synthèse IA fondés sur des flux
-              publics réels. Aucun événement fictif n&apos;est injecté dans
+              publics réels. Aucun événement fictif n’est injecté dans
               cette vue.
             </p>
             <div className="mt-4 flex flex-wrap gap-2"><span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-semibold text-emerald-300"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Flux FXMacroData : Connecté</span><span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-semibold text-emerald-300"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Groq AI Engine : En ligne</span></div>

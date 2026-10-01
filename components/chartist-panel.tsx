@@ -205,7 +205,7 @@ export default function ChartistPanel({ result, selectedTrade = null }: Chartist
           </div>
           <p className="mt-1 text-xs text-zinc-500">
             {context.selectedSymbol} · chandeliers reconstruits depuis
-            l&apos;historique MT5 · volumes relatifs
+            l’historique MT5 · volumes relatifs
           </p>
         </div>
         <span className="hidden text-[11px] text-zinc-600 sm:block">
@@ -282,7 +282,7 @@ export default function ChartistPanel({ result, selectedTrade = null }: Chartist
                   Posez une question sur votre structure.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-zinc-500">
-                  L&apos;IA reçoit uniquement les bougies, swings et statuts
+                  L’IA reçoit uniquement les bougies, swings et statuts
                   calculés. Une figure sans cassure de neckline restera « En
                   formation / Non confirmée ».
                 </p>

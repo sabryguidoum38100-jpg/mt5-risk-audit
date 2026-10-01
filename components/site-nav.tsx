@@ -17,7 +17,7 @@ export default function SiteNav() {
   return (
     <nav aria-label="Navigation principale" className="border-b border-white/[0.07] bg-[#09090b]/95 px-5 py-2 backdrop-blur sm:px-8">
       <div className="mx-auto flex max-w-6xl items-center gap-1 overflow-x-auto">
-        <Link href="/" className="mr-3 flex shrink-0 items-center gap-2 px-2 py-2 text-xs font-semibold text-white">
+        <Link href="/" className="mr-3 flex shrink-0 items-center gap-2 px-2 py-2 text-xs font-semibold text-white" aria-label="AuditProp Trading OS">
           <AuditPropLogo className="h-7 w-7 text-emerald-400" />
           <span>AuditProp</span>
         </Link>
