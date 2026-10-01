@@ -3,8 +3,8 @@
  * ---------------------------------------------------------------------------
  * Reçoit UNIQUEMENT le JSON des métriques déjà calculées par
  * lib/mt5-parser.ts (jamais les transactions brutes) et demande à Groq
- * une analyse comportementale orientée "Prop Firm & Biais psychologiques" :
- * revenge trading, risque de dépassement de drawdown, recommandations.
+ * une analyse comportementale orientée "Trading OS & moteur de décision" :
+ * sur-réactivité post-perte, risque de dépassement de drawdown, recommandations.
  *
  * Nécessite la variable d'environnement GROQ_API_KEY.
  */
@@ -81,14 +81,14 @@ ${JSON.stringify(metrics, null, 2)}
 
 CONTEXTE À PRENDRE EN COMPTE :
 - Les règles typiques de prop firm limitent le drawdown quotidien à environ 5 % et le drawdown maximal global à environ 10 %.
-- "quickReentriesAfterLoss" (valeur : ${metrics.quickReentriesAfterLoss}) compte les transactions ouvertes dans les ${metrics.revengeWindowMinutes} minutes suivant la clôture d'une perte : c'est un signal de "revenge trading" (trading de vengeance / réaction émotionnelle à une perte).
+- "quickReentriesAfterLoss" (valeur : ${metrics.quickReentriesAfterLoss}) compte les transactions ouvertes dans les ${metrics.postLossResponseWindowMinutes} minutes suivant la clôture d'une perte : c'est un signal de sur-réactivité post-perte, aussi appelé biais de compensation ou pression d'exécution.
 - "maxLosingStreak" décrit la pire série de pertes consécutives du trader.
 - "maxDrawdownPercent" (${metrics.maxDrawdownPercent} %) est calculé sur une courbe d'équité qui part d'un solde de départ de ${metrics.initialBalanceAssumed} (détecté dans le fichier, ou estimé par défaut si absent).
 - "significantLosingStreaks" compte le nombre de séries de 3 pertes consécutives ou plus.
 
 TA MISSION :
 1. Évalue un score de risque comportemental global de 0 (discipline exemplaire) à 100 (risque élevé de destruction de compte).
-2. Détecte les biais psychologiques observables STRICTEMENT à partir des métriques (revenge trading, surtrading, absence de gestion du risque après une perte, etc.) — n'invente rien qui ne soit pas suggéré par les chiffres fournis.
+2. Détecte les biais observables STRICTEMENT à partir des métriques (sur-réactivité post-perte, surtrading, absence de gestion du risque après une perte, etc.) — n'invente rien qui ne soit pas suggéré par les chiffres fournis.
 3. Donne une alerte claire et chiffrée sur le risque de dépassement des limites de drawdown d'une prop firm au vu du drawdown déjà observé.
 4. Propose des recommandations comportementales concrètes et actionnables (pas de généralités vagues type "sois discipliné").
 

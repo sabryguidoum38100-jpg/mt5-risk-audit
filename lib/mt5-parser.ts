@@ -81,8 +81,8 @@ export interface MT5Metrics {
   worstTrade: number;
   maxLosingStreak: LosingStreak | null;
   significantLosingStreaks: number; // nb de séries de pertes >= SIGNIFICANT_STREAK_LENGTH
-  quickReentriesAfterLoss: number; // trades ouverts < revengeWindowMinutes après une perte
-  revengeWindowMinutes: number;
+  quickReentriesAfterLoss: number; // trades ouverts dans une fenêtre de réponse post-perte
+  postLossResponseWindowMinutes: number;
   equityCurve: EquityPoint[];
   initialBalanceAssumed: number;
   startDate: string | null;
@@ -109,7 +109,7 @@ export class MT5ParserError extends Error {
 // Configuration
 // ---------------------------------------------------------------------------
 
-const REVENGE_WINDOW_MINUTES = 5;
+const POST_LOSS_RESPONSE_WINDOW_MINUTES = 5;
 const DEFAULT_INITIAL_BALANCE = 10000;
 const SIGNIFICANT_STREAK_LENGTH = 3;
 
@@ -689,8 +689,8 @@ function computeMetrics(
         }
       : null;
 
-  // --- Détection heuristique du "revenge trading" ------------------------
-  // Compte les transactions ouvertes moins de REVENGE_WINDOW_MINUTES après
+  // --- Détection heuristique de la sur-réactivité post-perte ---------------
+  // Compte les transactions ouvertes moins de POST_LOSS_RESPONSE_WINDOW_MINUTES après
   // la clôture (ou l'ouverture si l'heure de clôture est inconnue) d'une
   // transaction perdante.
   let quickReentriesAfterLoss = 0;
@@ -700,7 +700,7 @@ function computeMetrics(
     if (current.profit < 0) {
       const refTime = current.closeTime ?? current.openTime;
       const deltaMinutes = (next.openTime.getTime() - refTime.getTime()) / 60000;
-      if (deltaMinutes >= 0 && deltaMinutes <= REVENGE_WINDOW_MINUTES) {
+      if (deltaMinutes >= 0 && deltaMinutes <= POST_LOSS_RESPONSE_WINDOW_MINUTES) {
         quickReentriesAfterLoss++;
       }
     }
@@ -724,7 +724,7 @@ function computeMetrics(
     maxLosingStreak,
     significantLosingStreaks: significantStreaks,
     quickReentriesAfterLoss,
-    revengeWindowMinutes: REVENGE_WINDOW_MINUTES,
+    postLossResponseWindowMinutes: POST_LOSS_RESPONSE_WINDOW_MINUTES,
     equityCurve,
     initialBalanceAssumed,
     startDate: trades[0]?.openTime.toISOString() ?? null,

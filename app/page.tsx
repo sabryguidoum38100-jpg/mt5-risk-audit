@@ -51,6 +51,8 @@ import SiteNav from "@/components/site-nav";
 import AuditPropLogo from "@/components/auditprop-logo";
 import { calculateAdvancedAnalytics } from "@/lib/advanced-analytics";
 import { ConsistencyCheck, InstitutionalMetrics, PnlHeatmap } from "@/components/advanced-analytics";
+import { AuditCard, MonteCarloPanel, StrategyRoadmap, TradeTagging, TradingOsSummary } from "@/components/trading-os-panels";
+import { projectMonteCarlo } from "@/lib/monte-carlo";
 
 interface DetectedBias {
   name: string;
@@ -454,6 +456,7 @@ export default function Home() {
   const [isGeneratingAudit, setIsGeneratingAudit] = useState(false);
   const [globalAuditError, setGlobalAuditError] = useState<string | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<MT5Trade | null>(null);
+  const [propFirmEnabled, setPropFirmEnabled] = useState(true);
 
   const handleAnalyze = useCallback(async (metrics: MT5Metrics) => {
     setIsAnalyzing(true);
@@ -570,6 +573,7 @@ export default function Home() {
     return metrics.equityCurve.slice(-Number(chartRange));
   }, [metrics, chartRange]);
   const advanced = useMemo(() => parseResult && metrics ? calculateAdvancedAnalytics(parseResult.trades, metrics) : null, [parseResult, metrics]);
+  const monteCarlo = useMemo(() => parseResult && metrics ? projectMonteCarlo(parseResult.trades, metrics) : null, [parseResult, metrics]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-black text-zinc-100">
@@ -581,8 +585,8 @@ export default function Home() {
               <Brain className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-tight text-white">
-                Risk &amp; Bias Audit
+                  <p className="text-sm font-semibold tracking-tight text-white">
+                    AuditProp Trading OS
               </p>
               <p className="text-[11px] text-zinc-500">
                 MT5 intelligence for Prop Firms
@@ -761,7 +765,7 @@ export default function Home() {
                   exploité
                 </div>
                 <h2 className="text-3xl font-semibold tracking-tight text-white">
-                  Votre cockpit de risque
+                  Votre moteur de décision
                 </h2>
                 <p className="mt-2 text-sm text-zinc-500">
                   {file?.name || "Historique importé"} · {parseResult.broker ?? "Source détectée"} · {metrics.totalTrades}{" "}
@@ -783,11 +787,12 @@ export default function Home() {
               className="sticky top-2 z-20 grid grid-cols-3 rounded-2xl border border-white/10 bg-black/95 p-1 shadow-xl shadow-black/30 backdrop-blur"
               aria-label="Navigation du rapport"
             >
+              <div className="col-span-3 mb-1 flex items-center justify-end px-2 pt-1"><label className="flex items-center gap-2 text-[10px] text-zinc-500"><input type="checkbox" checked={propFirmEnabled} onChange={(event) => { setPropFirmEnabled(event.target.checked); if (!event.target.checked && activeTab === "prop") setActiveTab("cockpit"); }} className="accent-emerald-400" /> Module Prop Firm</label></div>
               {(
                 [
                   ["cockpit", "Cockpit", "KPIs & graphique"],
                   ["behavioral", "Analyse Behavioral", "Score & biais"],
-                  ["prop", "Prop Firm & Export", "Règles & Premium"],
+                  ...(propFirmEnabled ? [["prop", "Prop Firm & Export", "Optionnel"]] as const : []),
                 ] as const
               ).map(([tab, label, hint]) => (
                 <button
@@ -806,6 +811,7 @@ export default function Home() {
                 </button>
               ))}
             </nav>
+            <TradingOsSummary metrics={metrics} />
             {parseResult.warnings.length > 0 && (
               <div>
                 <button
@@ -875,6 +881,8 @@ export default function Home() {
                 <ChartistPanel result={parseResult} selectedTrade={selectedTrade} />
                 {advanced && <div className="grid gap-4 lg:grid-cols-2"><PnlHeatmap days={advanced.heatmap} /><InstitutionalMetrics analytics={advanced} /></div>}
                 {advanced && <ConsistencyCheck analytics={advanced} />}
+                {advanced && monteCarlo && <div className="grid gap-4 lg:grid-cols-2"><MonteCarloPanel projection={monteCarlo} /><TradeTagging trades={parseResult.trades} /></div>}
+                {advanced && <StrategyRoadmap result={parseResult} metrics={metrics} advanced={advanced} />}
                 <section className="rounded-3xl border border-violet-400/15 bg-violet-400/[0.04] p-4 shadow-2xl shadow-black/10 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-violet-300" /> Diagnostic IA global</div><p className="mt-1 text-xs text-zinc-500">Une synthèse Groq basée uniquement sur les métriques agrégées.</p></div><button type="button" onClick={() => void generateGlobalAudit()} disabled={isGeneratingAudit} className="inline-flex items-center gap-2 rounded-xl bg-violet-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-violet-200 disabled:opacity-50">{isGeneratingAudit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Générer l&apos;Audit IA</button></div>{globalAuditError && <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-200">{globalAuditError}</p>}{globalAudit && <div className="mt-5 space-y-5"><p className="text-sm leading-6 text-zinc-300">{globalAudit.summary}</p><div className="grid gap-4 md:grid-cols-3">{[["Forces", globalAudit.strengths, "text-emerald-300"], ["Faiblesses", globalAudit.weaknesses, "text-rose-300"], ["Plan d'action", globalAudit.actionPlan, "text-sky-300"]].map(([title, items, tone]) => <div key={title as string} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><h4 className={`text-xs font-semibold uppercase tracking-wider ${tone as string}`}>{title as string}</h4><ul className="mt-3 space-y-2 text-xs leading-5 text-zinc-400">{(items as string[]).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>)}</div></div>}</section>
                 <div className="grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/10">
@@ -1008,9 +1016,10 @@ export default function Home() {
                 </div>
               </>
             )}
-            {activeTab === "prop" && <PropRulesChecker metrics={metrics} />}
-            {activeTab === "prop" && (
+            {activeTab === "prop" && propFirmEnabled && <PropRulesChecker metrics={metrics} />}
+            {activeTab === "prop" && propFirmEnabled && (
               <div className="grid gap-3 sm:grid-cols-2">
+                <AuditCard metrics={metrics} />
                 <PremiumCard
                   icon={FileText}
                   title="Export PDF professionnel"
@@ -1018,8 +1027,8 @@ export default function Home() {
                 />
                 <PremiumCard
                   icon={Flame}
-                  title="Détecteur de revenge trading"
-                  text="Identifiez les ré-entrées émotionnelles et les séquences à risque avec une vue dédiée."
+                  title="Sur-réactivité post-perte"
+                  text="Identifiez les ré-entrées précipitées et les séquences de compensation avec une terminologie institutionnelle."
                 />
               </div>
             )}
