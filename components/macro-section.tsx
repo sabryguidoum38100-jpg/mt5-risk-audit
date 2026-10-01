@@ -57,21 +57,22 @@ function impactClass(impact: MacroItem["impact"]) {
 }
 
 function fallbackVisual(item: MacroItem) {
-  const calendar = item.kind === "calendar";
+  const category = /crypto|bitcoin|ethereum|coinbase/i.test(item.title) ? "Crypto" : /forex|fx|eur|usd|jpy|gbp/i.test(item.title) ? "Forex" : item.kind === "calendar" ? "Macro" : "Bourse";
+  const tone = category === "Crypto" ? "from-violet-400/25 via-fuchsia-400/10" : category === "Forex" ? "from-sky-400/25 via-cyan-400/10" : category === "Macro" ? "from-amber-400/25 via-orange-400/10" : "from-emerald-400/25 via-teal-400/10";
   return (
     <div
-      className={`flex h-36 items-center justify-between border-b border-white/[0.07] px-5 ${calendar ? "bg-gradient-to-br from-amber-400/20 via-orange-400/10 to-black" : "bg-gradient-to-br from-sky-400/20 via-violet-400/10 to-black"}`}
+      className={`flex h-36 items-center justify-between border-b border-white/[0.07] bg-gradient-to-br ${tone} to-black px-5`}
     >
       <div>
         <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-          {calendar ? "Economic calendar" : "Market intelligence"}
+          {category} intelligence
         </span>
         <p className="mt-2 max-w-[14rem] text-sm font-medium text-zinc-300">
           {item.source}
         </p>
       </div>
       <TrendingUp
-        className={`h-9 w-9 ${calendar ? "text-amber-300/60" : "text-sky-300/60"}`}
+        className={`h-9 w-9 ${category === "Crypto" ? "text-fuchsia-300/70" : category === "Macro" ? "text-amber-300/70" : category === "Forex" ? "text-cyan-300/70" : "text-emerald-300/70"}`}
       />
     </div>
   );
@@ -132,6 +133,7 @@ export default function MacroSection() {
             Actualiser
           </button>
         </div>
+        <div className="mt-5 overflow-hidden rounded-xl border border-emerald-400/15 bg-emerald-400/[0.04] py-2"><div className="macro-marquee flex min-w-max gap-10 whitespace-nowrap px-4 text-[11px] text-emerald-200/80">{[...(data?.articles ?? []), ...(data?.calendar ?? [])].slice(0, 10).map((item, index) => <span key={`${item.link}-${index}`}><b className="text-emerald-300">LIVE</b> · {item.title}</span>)}</div></div>
         {loading && (
           <div className="mt-8 space-y-4"><div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-zinc-400"><Loader2 className="h-4 w-4 animate-spin text-sky-300" />Connexion aux flux financiers réels…</div><div className="grid gap-4 lg:grid-cols-2"><div className="skeleton-shimmer h-52 rounded-3xl" /><div className="skeleton-shimmer h-52 rounded-3xl" /></div></div>
         )}

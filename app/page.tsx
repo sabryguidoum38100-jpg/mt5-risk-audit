@@ -43,11 +43,14 @@ import {
   parseUniversalHistory,
   type MT5Metrics,
   type MT5ParseResult,
+  type MT5Trade,
 } from "@/lib/mt5-parser";
 import ChartistPanel from "@/components/chartist-panel";
 import MacroSection from "@/components/macro-section";
 import SiteNav from "@/components/site-nav";
 import AuditPropLogo from "@/components/auditprop-logo";
+import { calculateAdvancedAnalytics } from "@/lib/advanced-analytics";
+import { ConsistencyCheck, InstitutionalMetrics, PnlHeatmap } from "@/components/advanced-analytics";
 
 interface DetectedBias {
   name: string;
@@ -61,6 +64,13 @@ interface PsychAnalysis {
   biasesDetected: DetectedBias[];
   drawdownAlert: { level: "ok" | "warning" | "critical"; message: string };
   recommendations: string[];
+}
+
+interface GlobalAudit {
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  actionPlan: string[];
 }
 
 type PropFirm = "FTMO" | "Topstep" | "FundedNext";
@@ -440,6 +450,10 @@ export default function Home() {
   );
   const [planExpanded, setPlanExpanded] = useState(false);
   const [chartRange, setChartRange] = useState<"all" | "7" | "30" | "90">("all");
+  const [globalAudit, setGlobalAudit] = useState<GlobalAudit | null>(null);
+  const [isGeneratingAudit, setIsGeneratingAudit] = useState(false);
+  const [globalAuditError, setGlobalAuditError] = useState<string | null>(null);
+  const [selectedTrade, setSelectedTrade] = useState<MT5Trade | null>(null);
 
   const handleAnalyze = useCallback(async (metrics: MT5Metrics) => {
     setIsAnalyzing(true);
@@ -471,6 +485,9 @@ export default function Home() {
       setParseError(null);
       setAnalysis(null);
       setAnalysisError(null);
+      setGlobalAudit(null);
+      setGlobalAuditError(null);
+      setSelectedTrade(result.trades[0] ?? null);
       setParseResult(result);
     },
     [],
@@ -523,10 +540,28 @@ export default function Home() {
     setParseError(null);
     setAnalysis(null);
     setAnalysisError(null);
+    setGlobalAudit(null);
+    setGlobalAuditError(null);
+    setSelectedTrade(null);
     setShowWarnings(false);
     setActiveTab("cockpit");
     setPlanExpanded(false);
     if (inputRef.current) inputRef.current.value = "";
+  };
+  const generateGlobalAudit = async () => {
+    if (!metrics || isGeneratingAudit) return;
+    setIsGeneratingAudit(true);
+    setGlobalAuditError(null);
+    try {
+      const response = await fetch("/api/audit-global", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ metrics: { ...metrics, advanced } }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Audit IA indisponible.");
+      setGlobalAudit(payload as GlobalAudit);
+    } catch (error) {
+      setGlobalAuditError(error instanceof Error ? error.message : "Audit IA indisponible.");
+    } finally {
+      setIsGeneratingAudit(false);
+    }
   };
   const metrics = parseResult?.metrics;
   const insights = useMemo(() => parseResult ? deriveInsights(parseResult.trades) : null, [parseResult]);
@@ -534,6 +569,7 @@ export default function Home() {
     if (!metrics || chartRange === "all") return metrics?.equityCurve ?? [];
     return metrics.equityCurve.slice(-Number(chartRange));
   }, [metrics, chartRange]);
+  const advanced = useMemo(() => parseResult && metrics ? calculateAdvancedAnalytics(parseResult.trades, metrics) : null, [parseResult, metrics]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-black text-zinc-100">
@@ -835,7 +871,11 @@ export default function Home() {
                     tone={(metrics.profitFactor ?? 0) >= 1 ? "good" : "bad"}
                   />
                 </div>
-                <ChartistPanel result={parseResult} />
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3"><div><p className="text-xs font-semibold text-white">Execution Mapping</p><p className="mt-1 text-[11px] text-zinc-500">Sélectionnez un trade pour afficher entrée, sortie, SL et TP.</p></div><select value={selectedTrade?.ticket ?? ""} onChange={(event) => setSelectedTrade(parseResult.trades.find((trade) => trade.ticket === event.target.value) ?? null)} className="max-w-full rounded-xl border border-white/10 bg-black px-3 py-2 text-xs text-white"><option value="">Aucun trade sélectionné</option>{parseResult.trades.map((trade) => <option key={trade.ticket} value={trade.ticket}>#{trade.ticket} · {trade.symbol} · {signed(trade.profit)} $</option>)}</select></div>
+                <ChartistPanel result={parseResult} selectedTrade={selectedTrade} />
+                {advanced && <div className="grid gap-4 lg:grid-cols-2"><PnlHeatmap days={advanced.heatmap} /><InstitutionalMetrics analytics={advanced} /></div>}
+                {advanced && <ConsistencyCheck analytics={advanced} />}
+                <section className="rounded-3xl border border-violet-400/15 bg-violet-400/[0.04] p-4 shadow-2xl shadow-black/10 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-violet-300" /> Diagnostic IA global</div><p className="mt-1 text-xs text-zinc-500">Une synthèse Groq basée uniquement sur les métriques agrégées.</p></div><button type="button" onClick={() => void generateGlobalAudit()} disabled={isGeneratingAudit} className="inline-flex items-center gap-2 rounded-xl bg-violet-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-violet-200 disabled:opacity-50">{isGeneratingAudit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Générer l&apos;Audit IA</button></div>{globalAuditError && <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-200">{globalAuditError}</p>}{globalAudit && <div className="mt-5 space-y-5"><p className="text-sm leading-6 text-zinc-300">{globalAudit.summary}</p><div className="grid gap-4 md:grid-cols-3">{[["Forces", globalAudit.strengths, "text-emerald-300"], ["Faiblesses", globalAudit.weaknesses, "text-rose-300"], ["Plan d'action", globalAudit.actionPlan, "text-sky-300"]].map(([title, items, tone]) => <div key={title as string} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><h4 className={`text-xs font-semibold uppercase tracking-wider ${tone as string}`}>{title as string}</h4><ul className="mt-3 space-y-2 text-xs leading-5 text-zinc-400">{(items as string[]).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>)}</div></div>}</section>
                 <div className="grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/10">
                       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">

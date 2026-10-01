@@ -12,6 +12,7 @@ import {
   Time,
   createChart,
   createSeriesMarkers,
+  type SeriesMarker,
 } from "lightweight-charts";
 import {
   Bot,
@@ -23,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import type { MT5ParseResult } from "@/lib/mt5-parser";
+import type { MT5ParseResult, MT5Trade } from "@/lib/mt5-parser";
 import {
   buildChartContext,
   chartContextForPrompt,
@@ -32,13 +33,14 @@ import {
 
 interface ChartistPanelProps {
   result: MT5ParseResult;
+  selectedTrade?: MT5Trade | null;
 }
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
-export default function ChartistPanel({ result }: ChartistPanelProps) {
+export default function ChartistPanel({ result, selectedTrade = null }: ChartistPanelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [context, setContext] = useState<ChartContext>(() =>
     buildChartContext(result),
@@ -119,18 +121,30 @@ export default function ChartistPanel({ result }: ChartistPanelProps) {
       color: candle.close >= candle.open ? "#34d39955" : "#fb718555",
     }));
     volumeSeries.setData(volumes);
-    createSeriesMarkers(
-      candleSeries,
-      context.candles
+    const markers: SeriesMarker<Time>[] = [
+        ...context.candles
         .filter((candle) => candle.direction)
         .map((candle) => ({
           time: candle.time as Time,
-          position: candle.direction === "buy" ? "belowBar" : "aboveBar",
+          position: (candle.direction === "buy" ? "belowBar" : "aboveBar") as "belowBar" | "aboveBar",
           color: candle.direction === "buy" ? "#38bdf8" : "#fb7185",
-          shape: candle.direction === "buy" ? "arrowUp" : "arrowDown",
+          shape: (candle.direction === "buy" ? "arrowUp" : "arrowDown") as "arrowUp" | "arrowDown",
+          price: candle.close,
           text: `${candle.direction === "buy" ? "Buy" : "Sell"} ${candle.ticket ?? ""}`,
         })),
-    );
+        ...(selectedTrade ? [{ time: Math.floor(selectedTrade.openTime.getTime() / 1000) as Time, position: "inBar" as const, color: "#fbbf24", shape: "circle" as const, price: selectedTrade.price, text: `Entrée #${selectedTrade.ticket}` }] : []),
+      ];
+    createSeriesMarkers(candleSeries, markers);
+    if (selectedTrade) {
+      const entryTime = Math.floor(selectedTrade.openTime.getTime() / 1000) as Time;
+      const exitTime = Math.floor((selectedTrade.closeTime ?? new Date(selectedTrade.openTime.getTime() + 60_000)).getTime() / 1000) as Time;
+      const exitCandle = context.candles.find((candle) => candle.ticket === selectedTrade.ticket);
+      const exitPrice = exitCandle?.close ?? selectedTrade.price;
+      chart.addSeries(LineSeries, { color: "#fbbf24", lineWidth: 2 }).setData([{ time: entryTime, value: selectedTrade.price }, { time: exitTime, value: exitPrice }]);
+      if (selectedTrade.stopLoss !== undefined) chart.addSeries(LineSeries, { color: "#fb7185", lineWidth: 2, lineStyle: 2 }).setData([{ time: entryTime, value: selectedTrade.stopLoss }, { time: exitTime, value: selectedTrade.stopLoss }]);
+      if (selectedTrade.takeProfit !== undefined) chart.addSeries(LineSeries, { color: "#34d399", lineWidth: 2, lineStyle: 2 }).setData([{ time: entryTime, value: selectedTrade.takeProfit }, { time: exitTime, value: selectedTrade.takeProfit }]);
+      createSeriesMarkers(candleSeries, [{ time: exitTime, position: "inBar", color: "#ffffff", shape: "circle", price: exitPrice, text: `Sortie ${exitPrice.toFixed(4)}` }]);
+    }
     chart.timeScale().fitContent();
     const resize = () =>
       chartRef.current &&

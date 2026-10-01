@@ -17,6 +17,13 @@ html, body { background-color: #09090b; min-height: 100%; }
 
 @keyframes auditprop-shimmer { to { background-position-x: -200%; } }
 
+.macro-marquee { animation: auditprop-marquee 34s linear infinite; }
+.macro-marquee:hover { animation-play-state: paused; }
+@keyframes auditprop-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.neon-card { transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease; }
+.neon-card:hover { transform: translateY(-2px); border-color: rgb(16 185 129 / 0.32); box-shadow: 0 14px 40px rgb(16 185 129 / 0.08); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

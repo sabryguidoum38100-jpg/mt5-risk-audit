@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, GraduationCap, LayoutDashboard } from "lucide-react";
+import { BarChart3, GraduationCap, LayoutDashboard, WalletCards } from "lucide-react";
 import AuditPropLogo from "@/components/auditprop-logo";
 
 const links = [
   { href: "/", label: "Audit", icon: LayoutDashboard },
   { href: "/macro", label: "Macro", icon: BarChart3 },
   { href: "/academy", label: "Académie", icon: GraduationCap },
+  { href: "/pricing", label: "Pricing", icon: WalletCards },
 ];
 
 export default function SiteNav() {
