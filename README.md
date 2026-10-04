@@ -1,48 +1,66 @@
-# Risk & Bias Audit — MT5
+# AuditProp — Trading OS & moteur de décision IA
 
-MVP à page unique (Next.js 15, App Router, TypeScript, Tailwind CSS) qui
-analyse un export d'historique MetaTrader 5 (CSV ou HTML) pour en extraire
-des métriques de risque et détecter des biais psychologiques de trading
-(revenge trading, dépassement de drawdown, séries de pertes) via l'API
-Groq et le modèle actif `openai/gpt-oss-120b`.
+AuditProp transforme un historique réel de trading en une lecture explicable du risque, du comportement et du contexte de marché.
 
-## Installation
+## Présentation professionnelle
+
+- [One-pager produit](./docs/AuditProp-One-Pager.md)
+- [Dossier de présentation complet](./docs/AuditProp-Dossier-Presentation.md)
+- [Documentation technique](./docs/AuditProp-Technical-README.md)
+- [Application en production](https://mt5-risk-audit.vercel.app)
+
+## Proposition de valeur
+
+AuditProp combine audit de performance, analyse comportementale, charting, macro intelligence live et couche Prop Firm optionnelle. Les transactions brutes restent dans le navigateur, les métriques sont calculées par du TypeScript déterministe avant l’intervention de l’IA et les flux macro sont affichés avec leur provenance.
+
+## Stack
+
+Next.js 15, App Router, React, TypeScript, Tailwind CSS, Groq SDK, Lightweight Charts, Recharts, Papa Parse, RSS Parser et Vercel.
+
+## Installation locale
 
 ```bash
 npm install
 cp .env.local.example .env.local
-# puis renseignez GROQ_API_KEY dans .env.local
+# renseigner GROQ_API_KEY dans .env.local
 npm run dev
 ```
 
-Ouvrez [http://localhost:3000](http://localhost:3000).
+Ouvrir [http://localhost:3000](http://localhost:3000).
 
-## Structure
+## Vérification production
 
-- `lib/mt5-parser.ts` — moteur de parsing CSV/HTML (100 % TypeScript pur,
-  sans IA) + calcul déterministe des métriques (P&L, win rate, profit
-  factor, max drawdown, séries de pertes, détection de ré-entrées rapides
-  après une perte).
-- `app/api/analyze/route.ts` — route API qui envoie uniquement le JSON des
-  métriques (jamais les transactions brutes) à Groq pour une analyse
-  comportementale orientée prop firm.
-- `app/page.tsx` — interface (drag & drop, cartes de stats, courbe de
-  capital via Recharts, carte d'analyse psychologique).
+```bash
+npx tsc --noEmit
+npm run build
+npm run start -- -p 3000
+```
 
-## Comment obtenir un export MT5
+## Variables d’environnement
 
-Dans le terminal MetaTrader 5, onglet **Historique du compte** :
+```bash
+GROQ_API_KEY=...
+NEXT_PUBLIC_APP_URL=https://mt5-risk-audit.vercel.app
+```
 
-- clic droit → **Exporter vers CSV**, ou
-- clic droit → **Enregistrer en tant que rapport** (HTML).
+La clé Groq doit rester côté serveur et ne doit jamais être commitée.
 
-## Limites connues du MVP
+## Architecture courte
 
-- Pour le format HTML "Deals", l'heure de chaque transaction est une
-  approximation (heure de la ligne de clôture), sans appariement précis
-  entrée/sortie.
-- Le solde initial utilisé pour le drawdown en % est détecté depuis les
-  lignes de dépôt du rapport si présentes, sinon une valeur par défaut de
-  10 000 est utilisée.
-- Commission et swap ne sont pas ajoutés au P&L (colonne "Profit" brute de
-  l'export).
+- `lib/mt5-parser.ts` : parser universel et métriques déterministes, sans IA.
+- `lib/advanced-analytics.ts` : ratios institutionnels, holding time et heatmap.
+- `lib/monte-carlo.ts` : projections statistiques à partir des trades importés.
+- `app/api/analyze/route.ts` : analyse comportementale Groq à partir de métriques agrégées.
+- `app/api/chat-chart/route.ts` : assistant chartiste à partir de bougies et swings.
+- `app/api/macro-news/route.ts` : RSS publics et calendrier FXMacroData.
+- `components/chartist-panel.tsx` : graphique, mapping d’exécution et drawer IA.
+- `components/trading-os-panels.tsx` : roadmap, tagging et synthèses Trading OS.
+- `app/page.tsx` : landing page et dashboard principal.
+
+## Limites à connaître
+
+Les formats d’export ne contiennent pas tous le même niveau de précision. Certains HTML utilisent une heure proxy lorsqu’un appariement entrée/sortie n’est pas disponible. Les règles Prop Firm sont indicatives et doivent être confirmées auprès du programme concerné. Les droits d’usage commercial des données macro doivent être vérifiés avant une distribution à grande échelle.
+
+## Licence et données externes
+
+Les dépendances et services externes restent soumis à leurs propres licences et conditions. Avant une commercialisation, documenter la licence des flux macro, la politique de confidentialité, les limites de responsabilité et la gestion des données utilisateur.

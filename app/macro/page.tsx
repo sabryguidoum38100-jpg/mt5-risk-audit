@@ -107,7 +107,7 @@ export default function MacroPage() {
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
               Le contexte avant le clic.
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-500">
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400">
               Calendrier économique dynamique et synthèse IA fondés sur des flux
               publics réels. Aucun événement fictif n’est injecté dans
               cette vue.
@@ -128,7 +128,7 @@ export default function MacroPage() {
           </div>
         )}
         {loading && (
-          <div className="mt-8 space-y-4"><div className="flex items-center gap-3 text-sm text-zinc-500"><Loader2 className="h-4 w-4 animate-spin text-sky-300" />Récupération des flux économiques réels…</div><div className="grid gap-4 lg:grid-cols-2"><Skeleton className="h-44" /><Skeleton className="h-44" /></div><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
+          <div className="mt-8 space-y-4"><div className="flex items-center gap-3 text-sm text-zinc-400"><Loader2 className="h-4 w-4 animate-spin text-sky-300" />Récupération des flux économiques réels…</div><div className="grid gap-4 lg:grid-cols-2"><Skeleton className="h-44" /><Skeleton className="h-44" /></div><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
         )}
         {data && (
           <>
@@ -214,13 +214,13 @@ export default function MacroPage() {
                       >
                         {impactLabel[item.impact]}
                       </span>
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs text-zinc-400">
                         {date(item.publishedAt)}
                       </span>
                     </button>
                   ))
                 ) : (
-                  <div className="p-8 text-center text-sm text-zinc-500">
+                  <div className="p-8 text-center text-sm text-zinc-400">
                     <CalendarDays className="mx-auto mb-3 h-6 w-6 text-zinc-700" />
                     Aucun événement réel ne correspond à ces filtres au moment
                     de la requête.
@@ -236,7 +236,7 @@ export default function MacroPage() {
           <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#09090b] p-5 shadow-2xl sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div><p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Événement live</p><h2 className="mt-2 text-xl font-semibold text-white">{selected.title}</h2></div>
-              <button type="button" onClick={() => setSelected(null)} aria-label="Fermer" className="rounded-xl p-2 text-zinc-500 hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setSelected(null)} aria-label="Fermer" className="rounded-xl p-2 text-zinc-400 hover:bg-white/5 hover:text-white"><X className="h-4 w-4" /></button>
             </div>
             <div className="mt-5 flex flex-wrap gap-2 text-xs text-zinc-400"><span className="rounded-full bg-white/5 px-3 py-1.5">{selected.currency ?? "—"}</span><span className={`rounded-full border px-3 py-1.5 ${impactClass[selected.impact]}`}>{selected.impact === "high" ? "🔴 Élevé" : selected.impact === "moderate" ? "🟡 Moyen" : "🟢 Faible"}</span><span className="rounded-full bg-white/5 px-3 py-1.5">{date(selected.publishedAt)}</span></div>
             <div className="mt-6 rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.05] p-4"><p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Analyse IA</p><p className="mt-3 text-sm leading-6 text-zinc-300">{explaining ? "Analyse en cours…" : explanation ?? "Analyse indisponible."}</p></div>

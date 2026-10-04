@@ -24,6 +24,12 @@ html, body { background-color: #09090b; min-height: 100%; }
 .neon-card { transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease; }
 .neon-card:hover { transform: translateY(-2px); border-color: rgb(16 185 129 / 0.32); box-shadow: 0 14px 40px rgb(16 185 129 / 0.08); }
 
+@media print {
+  nav, button, input, select, .no-print { display: none !important; }
+  body, main { background: #ffffff !important; color: #111827 !important; }
+  section, article, div { break-inside: avoid; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

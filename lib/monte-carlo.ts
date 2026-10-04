@@ -35,6 +35,7 @@ export function projectMonteCarlo(trades: MT5Trade[], metrics: MT5Metrics, simul
   const averageLoss = losses.length ? losses.reduce((sum, value) => sum + value, 0) / losses.length : 0;
   const riskReward = averageLoss ? averageWin / averageLoss : null;
   if (!trades.length || (!wins.length && !losses.length)) return { simulations, horizon, successProbability: 0, medianReturn: 0, medianDrawdown: 0, p90Drawdown: 0, worstDrawdown: 0, expectedFinalPnL: 0, winRate, riskReward };
+  const simulationWinRate = (wins.length + 1) / (trades.length + 2);
   const random = createSeededRandom(Math.round(metrics.totalPnL * 100) + trades.length * 7919);
   const finalPnLs: number[] = [];
   const drawdowns: number[] = [];
@@ -43,7 +44,7 @@ export function projectMonteCarlo(trades: MT5Trade[], metrics: MT5Metrics, simul
     let peak = 0;
     let maxDrawdown = 0;
     for (let trade = 0; trade < horizon; trade += 1) {
-      if (random() < winRate) pnl += averageWin;
+      if (random() < simulationWinRate) pnl += averageWin;
       else pnl -= averageLoss;
       peak = Math.max(peak, pnl);
       maxDrawdown = Math.max(maxDrawdown, peak - pnl);
@@ -52,10 +53,13 @@ export function projectMonteCarlo(trades: MT5Trade[], metrics: MT5Metrics, simul
     drawdowns.push(maxDrawdown);
   }
   const positive = finalPnLs.filter((value) => value > 0).length;
+  const rawProbability = (positive / simulations) * 100;
+  const confidence = 1 - Math.exp(-trades.length / 40);
+  const calibratedProbability = 50 + (rawProbability - 50) * confidence;
   return {
     simulations,
     horizon,
-    successProbability: (positive / simulations) * 100,
+    successProbability: Math.min(95, Math.max(5, calibratedProbability)),
     medianReturn: percentile(finalPnLs, 0.5),
     medianDrawdown: percentile(drawdowns, 0.5),
     p90Drawdown: percentile(drawdowns, 0.9),

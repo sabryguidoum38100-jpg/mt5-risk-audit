@@ -64,7 +64,7 @@ function fallbackVisual(item: MacroItem) {
       className={`flex h-36 items-center justify-between border-b border-white/[0.07] bg-gradient-to-br ${tone} to-black px-5`}
     >
       <div>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
           {category} intelligence
         </span>
         <p className="mt-2 max-w-[14rem] text-sm font-medium text-zinc-300">
@@ -116,7 +116,7 @@ export default function MacroSection() {
             <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               Flash Macro &amp; Santé des Marchés
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
               Actualités financières et calendrier économique récupérés depuis
               des flux publics distants, puis synthétisés par Groq à partir des
               cinq derniers articles.
@@ -186,7 +186,7 @@ export default function MacroSection() {
                       </a>
                     ))
                   ) : (
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-400">
                       Aucun événement publié par le flux calendrier au moment de
                       la requête.
                     </p>
@@ -227,7 +227,7 @@ export default function MacroSection() {
                       {item.title}
                     </h3>
                     {item.summary && (
-                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500">
+                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-400">
                         {item.summary}
                       </p>
                     )}

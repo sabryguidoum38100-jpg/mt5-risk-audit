@@ -203,7 +203,7 @@ export default function ChartistPanel({ result, selectedTrade = null }: Chartist
             <Sparkles className="h-4 w-4 text-sky-300" /> Charting &amp;
             structure
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-zinc-400">
             {context.selectedSymbol} · chandeliers reconstruits depuis
             l’historique MT5 · volumes relatifs
           </p>
@@ -213,7 +213,7 @@ export default function ChartistPanel({ result, selectedTrade = null }: Chartist
         </span>
       </div>
       <div ref={chartRef} className="min-h-[370px] w-full p-2" />
-      <div className="flex flex-wrap gap-2 border-t border-white/[0.07] px-5 py-3 text-[11px] text-zinc-500">
+      <div className="flex flex-wrap gap-2 border-t border-white/[0.07] px-5 py-3 text-[11px] text-zinc-400">
         <span className="rounded-full bg-white/5 px-2.5 py-1">
           {context.candles.length} bougies
         </span>
@@ -262,14 +262,14 @@ export default function ChartistPanel({ result, selectedTrade = null }: Chartist
               <h3 className="text-sm font-semibold text-white">
                 Assistant Chartiste IA
               </h3>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-zinc-400">
                 Structure validée par les swings
               </p>
             </div>
           </div>
           <button
             onClick={() => setDrawerOpen(false)}
-            className="rounded-lg p-2 text-zinc-500 hover:bg-white/5 hover:text-white"
+            className="rounded-lg p-2 text-zinc-400 hover:bg-white/5 hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
@@ -281,7 +281,7 @@ export default function ChartistPanel({ result, selectedTrade = null }: Chartist
                 <p className="text-sm font-medium text-white">
                   Posez une question sur votre structure.
                 </p>
-                <p className="mt-2 text-xs leading-5 text-zinc-500">
+                <p className="mt-2 text-xs leading-5 text-zinc-400">
                   L’IA reçoit uniquement les bougies, swings et statuts
                   calculés. Une figure sans cassure de neckline restera « En
                   formation / Non confirmée ».
@@ -309,7 +309,7 @@ export default function ChartistPanel({ result, selectedTrade = null }: Chartist
                 key={index}
                 className={`rounded-2xl p-3.5 text-sm leading-6 ${message.role === "user" ? "ml-8 bg-sky-300/10 text-sky-100" : "mr-3 border border-white/10 bg-white/[0.04] text-zinc-300"}`}
               >
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
                   {message.role === "user" ? "Vous" : "Assistant"}
                 </p>
                 <ReactMarkdown
@@ -337,7 +337,7 @@ export default function ChartistPanel({ result, selectedTrade = null }: Chartist
               </div>
             ))}
             {isSending && (
-              <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <div className="flex items-center gap-2 text-xs text-zinc-400">
                 <Loader2 className="h-4 w-4 animate-spin" /> Analyse de la
                 structure…
               </div>

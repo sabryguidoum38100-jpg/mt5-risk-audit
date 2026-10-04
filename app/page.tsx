@@ -53,6 +53,7 @@ import { calculateAdvancedAnalytics } from "@/lib/advanced-analytics";
 import { ConsistencyCheck, InstitutionalMetrics, PnlHeatmap } from "@/components/advanced-analytics";
 import { AuditCard, MonteCarloPanel, StrategyRoadmap, TradeTagging, TradingOsSummary } from "@/components/trading-os-panels";
 import { projectMonteCarlo } from "@/lib/monte-carlo";
+import { DEMO_TRADE_COUNT, getDemoHistoryCsv } from "@/lib/demo-history";
 
 interface DetectedBias {
   name: string;
@@ -122,11 +123,11 @@ function FAQSection() {
               {open === index ? (
                 <ChevronUp className="h-4 w-4 shrink-0 text-sky-300" />
               ) : (
-                <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500" />
+                <ChevronDown className="h-4 w-4 shrink-0 text-zinc-400" />
               )}
             </button>
             {open === index && (
-              <p className="border-t border-white/[0.07] px-4 pb-4 pt-3 text-sm leading-6 text-zinc-500">
+              <p className="border-t border-white/[0.07] px-4 pb-4 pt-3 text-sm leading-6 text-zinc-400">
                 {answer}
               </p>
             )}
@@ -144,7 +145,18 @@ function ProductProofSection() {
     ["Contexte réellement vivant", "Le calendrier et les flux macro sont récupérés depuis des sources publiques. Si un flux manque, l’interface affiche un état vide plutôt qu’un chiffre inventé.", Activity],
     ["Décision, pas prédiction", "La roadmap croise historique, structure de prix et contexte économique pour cadrer l’action — sans promesse de rendement.", Brain],
   ] as const;
-  return <section className="border-t border-white/[0.07] py-14"><div className="mx-auto max-w-4xl text-center"><p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Pourquoi AuditProp</p><h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">Un système de décision que vous pouvez comprendre.</h2><p className="mt-4 text-sm leading-6 text-zinc-500">Une architecture pensée pour réduire le bruit, rendre les risques visibles et préserver la confiance entre votre historique et l’analyse.</p></div><div className="mx-auto mt-8 grid max-w-5xl gap-3 sm:grid-cols-2">{proofPoints.map(([title, text, Icon]) => <article key={title} className="neon-card rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><Icon className="h-4 w-4" /></span><h3 className="text-sm font-semibold text-white">{title}</h3></div><p className="mt-3 text-xs leading-5 text-zinc-500">{text}</p></article>)}</div></section>;
+  return <section className="border-t border-white/[0.07] py-14"><div className="mx-auto max-w-4xl text-center"><p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Pourquoi AuditProp</p><h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">Un système de décision que vous pouvez comprendre.</h2><p className="mt-4 text-sm leading-6 text-zinc-400">Une architecture pensée pour réduire le bruit, rendre les risques visibles et préserver la confiance entre votre historique et l’analyse.</p></div><div className="mx-auto mt-8 grid max-w-5xl gap-3 sm:grid-cols-2">{proofPoints.map(([title, text, Icon]) => <article key={title} className="neon-card rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><Icon className="h-4 w-4" /></span><h3 className="text-sm font-semibold text-white">{title}</h3></div><p className="mt-3 text-xs leading-5 text-zinc-400">{text}</p></article>)}</div></section>;
+}
+
+function HeroDashboardPreview() {
+  return (
+    <div className="mt-4 rounded-2xl border border-white/[0.08] bg-[#0d0d10] p-3 shadow-2xl shadow-black/30">
+      <div className="flex items-center justify-between text-[10px] text-zinc-400"><span className="font-semibold text-white">Aperçu du cockpit</span><span className="flex items-center gap-1 text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live</span></div>
+      <div className="mt-3 grid grid-cols-3 gap-2">{[["PnL", "+12,4%", "text-emerald-300"], ["Drawdown", "-3,1%", "text-amber-300"], ["Win rate", "61,8%", "text-sky-300"]].map(([label, value, tone]) => <div key={label} className="rounded-xl border border-white/[0.07] bg-black/40 p-2"><p className="text-[9px] uppercase tracking-wider text-zinc-400">{label}</p><p className={`mt-1 text-xs font-semibold ${tone}`}>{value}</p></div>)}</div>
+      <div className="mt-3 flex h-16 items-end gap-1 rounded-xl border border-white/[0.06] bg-black/40 px-2 py-2">{[22, 31, 27, 40, 36, 48, 44, 56, 52, 62, 58, 69, 66, 76, 72, 84].map((height, index) => <span key={index} className={`flex-1 rounded-t-sm ${index === 5 || index === 11 ? "bg-emerald-300/80" : "bg-sky-300/35"}`} style={{ height: `${height}%` }} />)}</div>
+      <p className="mt-2 text-[10px] text-zinc-400">Equity · comportements · contexte macro · décision</p>
+    </div>
+  );
 }
 
 const FIRM_RULES: Record<
@@ -197,13 +209,14 @@ function deriveInsights(trades: MT5ParseResult["trades"]) {
   const sorted = (map: Map<string, number>) => [...map.entries()].sort((a, b) => b[1] - a[1]);
   const pairs = sorted(bySymbol);
   const profitablePairs = pairs.filter(([, profit]) => profit > 0);
-  const worstDay = [...byWeekday.entries()].sort((a, b) => a[1] - b[1])[0];
+  const worstDay = [...byWeekday.entries()].filter(([, profit]) => profit < 0).sort((a, b) => a[1] - b[1])[0] ?? null;
   const sessions = sorted(bySession);
-  return { profitablePair: profitablePairs[0] ?? null, toxicPair: pairs[pairs.length - 1] ?? null, worstDay: worstDay ?? null, bestSession: sessions.find(([, profit]) => profit > 0) ?? null };
+  const toxicPair = pairs.find(([, profit]) => profit < 0) ?? null;
+  return { profitablePair: profitablePairs[0] ?? null, toxicPair, worstDay, bestSession: sessions.find(([, profit]) => profit > 0) ?? null };
 }
 
 function InsightCard({ label, value, detail, tone = "neutral" }: { label: string; value: string; detail: string; tone?: "good" | "bad" | "neutral" }) {
-  return <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 transition duration-300 hover:-translate-y-0.5 hover:border-emerald-400/20"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{label}</p><p className={`mt-3 truncate text-base font-semibold ${tone === "good" ? "text-emerald-300" : tone === "bad" ? "text-rose-300" : "text-white"}`}>{value}</p><p className="mt-1 text-xs text-zinc-500">{detail}</p></div>;
+  return <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 transition duration-300 hover:-translate-y-0.5 hover:border-emerald-400/20"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">{label}</p><p className={`mt-3 truncate text-base font-semibold ${tone === "good" ? "text-emerald-300" : tone === "bad" ? "text-rose-300" : "text-white"}`}>{value}</p><p className="mt-1 text-xs text-zinc-400">{detail}</p></div>;
 }
 
 function StatCard({
@@ -228,7 +241,7 @@ function StatCard({
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-2xl shadow-black/10">
       <div className="mb-5 flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+        <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">
           {label}
         </span>
         <span
@@ -242,7 +255,7 @@ function StatCard({
       >
         {value}
       </p>
-      {detail && <p className="mt-2 text-xs text-zinc-500">{detail}</p>}
+      {detail && <p className="mt-2 text-xs text-zinc-400">{detail}</p>}
     </div>
   );
 }
@@ -257,7 +270,7 @@ function RiskGauge({ score }: { score: number }) {
           <span className="text-5xl font-semibold tracking-tight text-white">
             {value}
           </span>
-          <span className="ml-1 text-sm text-zinc-500">/100</span>
+          <span className="ml-1 text-sm text-zinc-400">/100</span>
         </div>
         <span className="text-sm font-medium" style={{ color }}>
           {value < 33
@@ -304,7 +317,7 @@ function ChartTooltip({
   const point = payload[0].payload;
   return (
     <div className="rounded-xl border border-white/10 bg-zinc-950/95 px-3 py-2 text-xs shadow-xl">
-      <p className="text-zinc-500">
+      <p className="text-zinc-400">
         {point.ticket === "INIT" ? "Solde initial" : `Ticket #${point.ticket}`}
       </p>
       <p className="mt-1 font-semibold text-white">{money(point.equity)}</p>
@@ -331,7 +344,7 @@ function PropRulesChecker({ metrics }: { metrics: MT5Metrics }) {
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
             <Shield className="h-4 w-4 text-sky-300" /> Prop Firm Rules Checker
           </div>
-          <p className="text-xs leading-relaxed text-zinc-500">
+          <p className="text-xs leading-relaxed text-zinc-400">
             Comparez votre drawdown réel aux seuils de votre challenge.
           </p>
         </div>
@@ -342,7 +355,7 @@ function PropRulesChecker({ metrics }: { metrics: MT5Metrics }) {
         </span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-xs text-zinc-500">
+        <label className="text-xs text-zinc-400">
           Prop firm
           <select
             value={firm}
@@ -354,7 +367,7 @@ function PropRulesChecker({ metrics }: { metrics: MT5Metrics }) {
             ))}
           </select>
         </label>
-        <label className="text-xs text-zinc-500">
+        <label className="text-xs text-zinc-400">
           Capital du compte
           <select
             value={capital}
@@ -371,23 +384,23 @@ function PropRulesChecker({ metrics }: { metrics: MT5Metrics }) {
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-          <p className="text-xs text-zinc-500">{firm}</p>
+          <p className="text-xs text-zinc-400">{firm}</p>
           <p className="mt-1 text-sm font-medium text-white">{rules.tagline}</p>
         </div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-          <p className="text-xs text-zinc-500">Drawdown quotidien max</p>
+          <p className="text-xs text-zinc-400">Drawdown quotidien max</p>
           <p className="mt-1 font-semibold text-white">
             {rules.daily}%{" "}
-            <span className="text-xs font-normal text-zinc-500">
+            <span className="text-xs font-normal text-zinc-400">
               ({money(dailyLimit)})
             </span>
           </p>
         </div>
         <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-          <p className="text-xs text-zinc-500">Drawdown total max</p>
+          <p className="text-xs text-zinc-400">Drawdown total max</p>
           <p className="mt-1 font-semibold text-white">
             {rules.total}%{" "}
-            <span className="text-xs font-normal text-zinc-500">
+            <span className="text-xs font-normal text-zinc-400">
               ({money(totalLimit)})
             </span>
           </p>
@@ -436,15 +449,26 @@ function PremiumCard({
 }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
-      <div className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+      <div className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
         Premium
       </div>
       <Icon className="mb-4 h-5 w-5 text-violet-300" />
       <h3 className="text-sm font-semibold text-white">{title}</h3>
-      <p className="mt-2 pr-12 text-xs leading-relaxed text-zinc-500">{text}</p>
+      <p className="mt-2 pr-12 text-xs leading-relaxed text-zinc-400">{text}</p>
       <div className="mt-4 flex items-center gap-2 text-xs text-violet-300">
         <Lock className="h-3 w-3" /> Bientôt disponible
       </div>
+    </div>
+  );
+}
+
+function PdfExportCard() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.05] p-4">
+      <div className="flex items-center gap-2 text-xs font-semibold text-emerald-200"><FileText className="h-4 w-4" /> Rapport PDF professionnel</div>
+      <p className="mt-3 text-xs leading-5 text-zinc-300">Générez un rapport imprimable avec le dashboard, les métriques, les graphiques et le contexte de votre audit.</p>
+      <button type="button" onClick={() => window.print()} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-emerald-200"><Download className="h-3.5 w-3.5" /> Exporter le rapport PDF</button>
+      <p className="mt-2 text-[10px] text-zinc-400">La boîte de dialogue d’impression permet de choisir « Enregistrer au format PDF ».</p>
     </div>
   );
 }
@@ -469,6 +493,7 @@ export default function Home() {
   const [globalAuditError, setGlobalAuditError] = useState<string | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<MT5Trade | null>(null);
   const [propFirmEnabled, setPropFirmEnabled] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
 
   const handleAnalyze = useCallback(async (metrics: MT5Metrics) => {
     setIsAnalyzing(true);
@@ -503,6 +528,7 @@ export default function Home() {
       setGlobalAudit(null);
       setGlobalAuditError(null);
       setSelectedTrade(result.trades[0] ?? null);
+      setIsDemo(false);
       setParseResult(result);
     },
     [],
@@ -546,6 +572,23 @@ export default function Home() {
     [applyResult],
   );
 
+  const loadDemo = useCallback(() => {
+    try {
+      const result = parseUniversalHistory(getDemoHistoryCsv());
+      setFile(null);
+      setParseError(null);
+      setAnalysis(null);
+      setAnalysisError(null);
+      setGlobalAudit(null);
+      setGlobalAuditError(null);
+      setSelectedTrade(result.trades[0] ?? null);
+      setIsDemo(true);
+      setParseResult(result);
+    } catch (error) {
+      setParseError(error instanceof Error ? error.message : "La démo est indisponible.");
+    }
+  }, []);
+
   useEffect(() => {
     if (parseResult) void handleAnalyze(parseResult.metrics);
   }, [parseResult, handleAnalyze]);
@@ -558,6 +601,7 @@ export default function Home() {
     setGlobalAudit(null);
     setGlobalAuditError(null);
     setSelectedTrade(null);
+    setIsDemo(false);
     setShowWarnings(false);
     setActiveTab("cockpit");
     setPlanExpanded(false);
@@ -600,7 +644,7 @@ export default function Home() {
                   <p className="text-sm font-semibold tracking-tight text-white">
                     AuditProp Trading OS
               </p>
-              <p className="text-[11px] text-zinc-500">
+              <p className="text-[11px] text-zinc-400">
                 Decision intelligence for every trader
               </p>
             </div>
@@ -615,7 +659,7 @@ export default function Home() {
           )}
         </header>
 
-        {!parseResult && <div className="flex flex-wrap gap-2 border-b border-white/[0.07] py-3"><LiveBadge label="Flux FXMacroData : Connecté" /><LiveBadge label="Groq AI Engine : En ligne" /></div>}
+        {!parseResult && <div className="flex max-w-full flex-wrap gap-2 overflow-x-auto border-b border-white/[0.07] py-3 sm:flex-nowrap"><LiveBadge label="Flux FXMacroData : Connecté" /><LiveBadge label="Groq AI Engine : En ligne" /></div>}
 
         {!parseResult && (
           <>
@@ -635,7 +679,7 @@ export default function Home() {
                   lecture claire de vos biais pour prendre de meilleures
                   décisions, actif après actif, session après session.
                 </p>
-                <div className="mt-7 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                <div className="mt-7 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
                   <span className="mr-1 font-medium text-zinc-400">
                     Compatible avec
                   </span>
@@ -648,7 +692,7 @@ export default function Home() {
                     </span>
                   ))}
                 </div>
-                <div className="mt-8 flex flex-wrap gap-5 text-xs text-zinc-500">
+                <div className="mt-8 flex flex-wrap gap-5 text-xs text-zinc-400">
                   <span className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-300" /> Analyse
                     locale des métriques
@@ -658,6 +702,9 @@ export default function Home() {
                     transaction brute envoyée
                   </span>
                 </div>
+                <button type="button" onClick={loadDemo} className="mt-5 inline-flex items-center gap-2 rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-4 py-2.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-300/60 hover:bg-emerald-300/20">
+                  <Sparkles className="h-3.5 w-3.5" /> Tester la démo · {DEMO_TRADE_COUNT} trades
+                </button>
               </div>
               <div>
                 <div
@@ -697,12 +744,15 @@ export default function Home() {
                     <p className="text-sm font-semibold text-white">
                       Déposez votre historique de trading
                     </p>
-                    <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+                    <p className="mt-2 text-xs leading-relaxed text-zinc-400">
                       MT4/5, eToro, XTB, Boursorama, Coinbase ou TradingView · CSV / HTML / TXT · 15 Mo maximum
                     </p>
                     <span className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-zinc-950">
                       Choisir un fichier <ArrowRight className="h-3.5 w-3.5" />
                     </span>
+                    <button type="button" onClick={(event) => { event.stopPropagation(); loadDemo(); }} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-4 py-2.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-300/20">
+                      <Sparkles className="h-3.5 w-3.5" /> Tester la démo
+                    </button>
                   </div>
                 </div>
                 <div className="mt-3 flex items-start gap-3 rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.05] p-3 text-xs leading-5 text-emerald-100/80">
@@ -718,6 +768,7 @@ export default function Home() {
                     {parseError}
                   </div>
                 )}
+                <HeroDashboardPreview />
               </div>
             </section>
             <section className="border-t border-white/[0.07] py-14">
@@ -762,7 +813,7 @@ export default function Home() {
                     <h3 className="mt-5 text-sm font-semibold text-white">
                       {title}
                     </h3>
-                    <p className="mt-2 text-xs leading-5 text-zinc-500">
+                    <p className="mt-2 text-xs leading-5 text-zinc-400">
                       {text}
                     </p>
                   </div>
@@ -786,8 +837,8 @@ export default function Home() {
                 <h2 className="text-3xl font-semibold tracking-tight text-white">
                   Votre moteur de décision
                 </h2>
-                <p className="mt-2 text-sm text-zinc-500">
-                  {file?.name || "Historique importé"} · {parseResult.broker ?? "Source détectée"} · {metrics.totalTrades}{" "}
+                <p className="mt-2 text-sm text-zinc-400">
+                  {isDemo ? "Démo AuditProp · données synthétiques" : file?.name || "Historique importé"} · {isDemo ? "45 trades" : parseResult.broker ?? "Source détectée"} · {metrics.totalTrades}{" "}
                   transactions · {dateLabel(metrics.startDate)} →{" "}
                   {dateLabel(metrics.endDate)}
                 </p>
@@ -806,7 +857,7 @@ export default function Home() {
               className="sticky top-2 z-20 grid grid-cols-3 rounded-2xl border border-white/10 bg-black/95 p-1 shadow-xl shadow-black/30 backdrop-blur"
               aria-label="Navigation du rapport"
             >
-              <div className="col-span-3 mb-1 flex items-center justify-end px-2 pt-1"><label className="flex items-center gap-2 text-[10px] text-zinc-500"><input type="checkbox" checked={propFirmEnabled} onChange={(event) => { setPropFirmEnabled(event.target.checked); if (!event.target.checked && activeTab === "prop") setActiveTab("cockpit"); }} className="accent-emerald-400" /> Module Prop Firm</label></div>
+              <div className="col-span-3 mb-1 flex items-center justify-end px-2 pt-1"><label className="flex items-center gap-2 text-[10px] text-zinc-400"><input type="checkbox" checked={propFirmEnabled} onChange={(event) => { setPropFirmEnabled(event.target.checked); if (!event.target.checked && activeTab === "prop") setActiveTab("cockpit"); }} className="accent-emerald-400" /> Module Prop Firm</label></div>
               {(
                 [
                   ["cockpit", "Cockpit", "KPIs & graphique"],
@@ -817,7 +868,7 @@ export default function Home() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`rounded-xl px-2 py-2.5 text-center transition sm:px-4 ${activeTab === tab ? "bg-white text-black" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"}`}
+                  className={`rounded-xl px-2 py-2.5 text-center transition sm:px-4 ${activeTab === tab ? "bg-white text-black" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"}`}
                 >
                   <span className="block text-[11px] font-semibold sm:text-xs">
                     {label}
@@ -847,7 +898,7 @@ export default function Home() {
                   )}
                 </button>
                 {showWarnings && (
-                  <div className="mt-2 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-zinc-500">
+                  <div className="mt-2 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-zinc-400">
                     {parseResult.warnings.map((warning, index) => (
                       <p key={index}>{warning}</p>
                     ))}
@@ -896,13 +947,13 @@ export default function Home() {
                     tone={(metrics.profitFactor ?? 0) >= 1 ? "good" : "bad"}
                   />
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3"><div><p className="text-xs font-semibold text-white">Execution Mapping</p><p className="mt-1 text-[11px] text-zinc-500">Sélectionnez un trade pour afficher entrée, sortie, SL et TP.</p></div><select value={selectedTrade?.ticket ?? ""} onChange={(event) => setSelectedTrade(parseResult.trades.find((trade) => trade.ticket === event.target.value) ?? null)} className="max-w-full rounded-xl border border-white/10 bg-black px-3 py-2 text-xs text-white"><option value="">Aucun trade sélectionné</option>{parseResult.trades.map((trade) => <option key={trade.ticket} value={trade.ticket}>#{trade.ticket} · {trade.symbol} · {signed(trade.profit)} $</option>)}</select></div>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3"><div><p className="text-xs font-semibold text-white">Execution Mapping</p><p className="mt-1 text-[11px] text-zinc-400">Sélectionnez un trade pour afficher entrée, sortie, SL et TP.</p></div><select value={selectedTrade?.ticket ?? ""} onChange={(event) => setSelectedTrade(parseResult.trades.find((trade) => trade.ticket === event.target.value) ?? null)} className="max-w-full rounded-xl border border-white/10 bg-black px-3 py-2 text-xs text-white"><option value="">Aucun trade sélectionné</option>{parseResult.trades.map((trade) => <option key={trade.ticket} value={trade.ticket}>#{trade.ticket} · {trade.symbol} · {signed(trade.profit)} $</option>)}</select></div>
                 <ChartistPanel result={parseResult} selectedTrade={selectedTrade} />
                 {advanced && <div className="grid gap-4 lg:grid-cols-2"><PnlHeatmap days={advanced.heatmap} /><InstitutionalMetrics analytics={advanced} /></div>}
                 {advanced && <ConsistencyCheck analytics={advanced} />}
                 {advanced && monteCarlo && <div className="grid gap-4 lg:grid-cols-2"><MonteCarloPanel projection={monteCarlo} /><TradeTagging trades={parseResult.trades} /></div>}
                 {advanced && <StrategyRoadmap result={parseResult} metrics={metrics} advanced={advanced} />}
-                <section className="rounded-3xl border border-violet-400/15 bg-violet-400/[0.04] p-4 shadow-2xl shadow-black/10 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-violet-300" /> Diagnostic IA global</div><p className="mt-1 text-xs text-zinc-500">Une synthèse Groq basée uniquement sur les métriques agrégées.</p></div><button type="button" onClick={() => void generateGlobalAudit()} disabled={isGeneratingAudit} className="inline-flex items-center gap-2 rounded-xl bg-violet-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-violet-200 disabled:opacity-50">{isGeneratingAudit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Générer l’Audit IA</button></div>{globalAuditError && <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-200">{globalAuditError}</p>}{globalAudit && <div className="mt-5 space-y-5"><p className="text-sm leading-6 text-zinc-300">{globalAudit.summary}</p><div className="grid gap-4 md:grid-cols-3">{[["Forces", globalAudit.strengths, "text-emerald-300"], ["Faiblesses", globalAudit.weaknesses, "text-rose-300"], ["Plan d'action", globalAudit.actionPlan, "text-sky-300"]].map(([title, items, tone]) => <div key={title as string} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><h4 className={`text-xs font-semibold uppercase tracking-wider ${tone as string}`}>{title as string}</h4><ul className="mt-3 space-y-2 text-xs leading-5 text-zinc-400">{(items as string[]).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>)}</div></div>}</section>
+                <section className="rounded-3xl border border-violet-400/15 bg-violet-400/[0.04] p-4 shadow-2xl shadow-black/10 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles className="h-4 w-4 text-violet-300" /> Diagnostic IA global</div><p className="mt-1 text-xs text-zinc-400">Une synthèse Groq basée uniquement sur les métriques agrégées.</p></div><button type="button" onClick={() => void generateGlobalAudit()} disabled={isGeneratingAudit} className="inline-flex items-center gap-2 rounded-xl bg-violet-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-violet-200 disabled:opacity-50">{isGeneratingAudit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Générer l’Audit IA</button></div>{globalAuditError && <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-200">{globalAuditError}</p>}{globalAudit && <div className="mt-5 space-y-5"><p className="text-sm leading-6 text-zinc-300">{globalAudit.summary}</p><div className="grid gap-4 md:grid-cols-3">{[["Forces", globalAudit.strengths, "text-emerald-300"], ["Faiblesses", globalAudit.weaknesses, "text-rose-300"], ["Plan d'action", globalAudit.actionPlan, "text-sky-300"]].map(([title, items, tone]) => <div key={title as string} className="rounded-2xl border border-white/[0.07] bg-black/20 p-4"><h4 className={`text-xs font-semibold uppercase tracking-wider ${tone as string}`}>{title as string}</h4><ul className="mt-3 space-y-2 text-xs leading-5 text-zinc-400">{(items as string[]).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>)}</div></div>}</section>
                 <div className="grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/10">
                       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -910,11 +961,11 @@ export default function Home() {
                         <h3 className="text-sm font-semibold text-white">
                           Courbe de capital
                         </h3>
-                        <p className="mt-1 text-xs text-zinc-500">
+                        <p className="mt-1 text-xs text-zinc-400">
                           Évolution de l’equity par transaction
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-400">{metrics.symbolsTraded.join(" · ")}</span><div className="flex rounded-lg border border-white/10 p-0.5">{(["all", "7", "30", "90"] as const).map((range) => <button key={range} type="button" onClick={() => setChartRange(range)} className={`rounded-md px-2 py-1 text-[10px] ${chartRange === range ? "bg-emerald-400 text-black" : "text-zinc-500 hover:text-white"}`}>{range === "all" ? "Tout" : `${range} tr`}</button>)}</div></div>
+                      <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/5 px-3 py-1 text-xs text-zinc-400">{metrics.symbolsTraded.join(" · ")}</span><div className="flex rounded-lg border border-white/10 p-0.5">{(["all", "7", "30", "90"] as const).map((range) => <button key={range} type="button" onClick={() => setChartRange(range)} className={`rounded-md px-2 py-1 text-[10px] ${chartRange === range ? "bg-emerald-400 text-black" : "text-zinc-400 hover:text-white"}`}>{range === "all" ? "Tout" : `${range} tr`}</button>)}</div></div>
                     </div>
                     <ResponsiveContainer width="100%" height={310}>
                       <AreaChart
@@ -952,6 +1003,7 @@ export default function Home() {
                           tick={{ fontSize: 11 }}
                           tickLine={false}
                           axisLine={{ stroke: "#ffffff1a" }}
+                          tickFormatter={(value: number) => `#${value}`}
                         />
                         <YAxis
                           stroke="#71717a"
@@ -959,8 +1011,9 @@ export default function Home() {
                           tickLine={false}
                           axisLine={false}
                           width={62}
+                          domain={["dataMin - 100", "dataMax + 100"]}
                           tickFormatter={(value: number) =>
-                            value.toLocaleString("fr-FR")
+                            `${Math.round(value).toLocaleString("fr-FR")} $`
                           }
                         />
                         <Tooltip content={<ChartTooltip />} />
@@ -995,13 +1048,13 @@ export default function Home() {
                         <h3 className="text-sm font-semibold text-white">
                           Psychological risk score
                         </h3>
-                        <p className="mt-1 text-xs text-zinc-500">
+                        <p className="mt-1 text-xs text-zinc-400">
                           Lecture comportementale IA
                         </p>
                       </div>
                     </div>
                     {isAnalyzing && (
-                      <div className="min-h-[240px] space-y-4 pt-4"><Skeleton className="h-8 w-24" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" /><div className="pt-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-sky-300" /><p className="mt-3 text-sm text-zinc-300">Analyse Groq en cours…</p><p className="mt-1 text-xs text-zinc-500">Vos métriques restent déterministes.</p></div></div>
+                      <div className="min-h-[240px] space-y-4 pt-4"><Skeleton className="h-8 w-24" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" /><div className="pt-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-sky-300" /><p className="mt-3 text-sm text-zinc-300">Analyse Groq en cours…</p><p className="mt-1 text-xs text-zinc-400">Vos métriques restent déterministes.</p></div></div>
                     )}
                     {!isAnalyzing && analysisError && (
                       <div className="space-y-3">
@@ -1039,11 +1092,7 @@ export default function Home() {
             {activeTab === "prop" && propFirmEnabled && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <AuditCard metrics={metrics} />
-                <PremiumCard
-                  icon={FileText}
-                  title="Export PDF professionnel"
-                  text="Transformez votre audit en rapport partageable pour votre journal ou votre coach."
-                />
+                <PdfExportCard />
                 <PremiumCard
                   icon={Flame}
                   title="Sur-réactivité post-perte"
@@ -1061,7 +1110,7 @@ export default function Home() {
                     <h3 className="text-sm font-semibold text-white">
                       Psychological risk score
                     </h3>
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-zinc-400">
                       Analyse comportementale IA
                     </p>
                   </div>
@@ -1100,7 +1149,7 @@ export default function Home() {
                             </span>
                             <Severity value={bias.severity} />
                           </div>
-                          <p className="mt-2 text-xs leading-5 text-zinc-500">
+                          <p className="mt-2 text-xs leading-5 text-zinc-400">
                             {bias.description}
                           </p>
                         </div>
@@ -1149,7 +1198,7 @@ export default function Home() {
               )}
           </div>
         )}
-        <footer className="mt-20 border-t border-white/[0.07] pt-10 text-xs text-zinc-500">
+        <footer className="mt-20 border-t border-white/[0.07] pt-10 text-xs text-zinc-400">
           <div className="grid gap-8 sm:grid-cols-[1.3fr_1fr_1fr]">
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
