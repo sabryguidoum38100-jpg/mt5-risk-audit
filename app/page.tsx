@@ -41,6 +41,7 @@ import {
 } from "recharts";
 import {
   parseUniversalHistory,
+  recalculateMetrics,
   type MT5Metrics,
   type MT5ParseResult,
   type MT5Trade,
@@ -151,7 +152,7 @@ function ProductProofSection() {
 function HeroDashboardPreview() {
   return (
     <div className="mt-4 rounded-2xl border border-white/[0.08] bg-[#0d0d10] p-3 shadow-2xl shadow-black/30">
-      <div className="flex items-center justify-between text-[10px] text-zinc-400"><span className="font-semibold text-white">Aperçu du cockpit</span><span className="flex items-center gap-1 text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live</span></div>
+      <div className="flex items-center justify-between text-[10px] text-zinc-400"><span className="font-semibold text-white">Aperçu du cockpit</span><span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-2 py-1 text-sky-200">Aperçu Démo</span></div>
       <div className="mt-3 grid grid-cols-3 gap-2">{[["PnL", "+12,4%", "text-emerald-300"], ["Drawdown", "-3,1%", "text-amber-300"], ["Win rate", "61,8%", "text-sky-300"]].map(([label, value, tone]) => <div key={label} className="rounded-xl border border-white/[0.07] bg-black/40 p-2"><p className="text-[9px] uppercase tracking-wider text-zinc-400">{label}</p><p className={`mt-1 text-xs font-semibold ${tone}`}>{value}</p></div>)}</div>
       <div className="mt-3 flex h-16 items-end gap-1 rounded-xl border border-white/[0.06] bg-black/40 px-2 py-2">{[22, 31, 27, 40, 36, 48, 44, 56, 52, 62, 58, 69, 66, 76, 72, 84].map((height, index) => <span key={index} className={`flex-1 rounded-t-sm ${index === 5 || index === 11 ? "bg-emerald-300/80" : "bg-sky-300/35"}`} style={{ height: `${height}%` }} />)}</div>
       <p className="mt-2 text-[10px] text-zinc-400">Equity · comportements · contexte macro · décision</p>
@@ -456,7 +457,7 @@ function PremiumCard({
       <h3 className="text-sm font-semibold text-white">{title}</h3>
       <p className="mt-2 pr-12 text-xs leading-relaxed text-zinc-400">{text}</p>
       <div className="mt-4 flex items-center gap-2 text-xs text-violet-300">
-        <Lock className="h-3 w-3" /> Bientôt disponible
+        <Lock className="h-3 w-3" /> Module avancé
       </div>
     </div>
   );
@@ -471,6 +472,16 @@ function PdfExportCard() {
       <p className="mt-2 text-[10px] text-zinc-400">La boîte de dialogue d’impression permet de choisir « Enregistrer au format PDF ».</p>
     </div>
   );
+}
+
+function fingerprint(value: unknown): string {
+  const text = JSON.stringify(value);
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `auditprop-analysis-${(hash >>> 0).toString(16)}`;
 }
 
 export default function Home() {
@@ -494,26 +505,39 @@ export default function Home() {
   const [selectedTrade, setSelectedTrade] = useState<MT5Trade | null>(null);
   const [propFirmEnabled, setPropFirmEnabled] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
+  const [capitalInput, setCapitalInput] = useState(10000);
 
-  const handleAnalyze = useCallback(async (metrics: MT5Metrics) => {
+  useEffect(() => {
+    const stored = Number(window.localStorage.getItem("auditprop-capital"));
+    if (Number.isFinite(stored) && stored > 0) setCapitalInput(stored);
+  }, []);
+
+  const handleAnalyze = useCallback(async (metrics: MT5Metrics, trades: MT5Trade[]) => {
     setIsAnalyzing(true);
     setAnalysisError(null);
+    const cacheKey = fingerprint({ metrics, trades: trades.map((trade) => ({ ...trade, openTime: trade.openTime.toISOString(), closeTime: trade.closeTime?.toISOString() ?? null })) });
+    try {
+      const cached = window.localStorage.getItem(cacheKey);
+      if (cached) {
+        setAnalysis(JSON.parse(cached) as PsychAnalysis);
+        setIsAnalyzing(false);
+        return;
+      }
+    } catch {
+      // Le cache local est facultatif.
+    }
     try {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metrics }),
+        body: JSON.stringify({ metrics, closureContext: trades.map((trade) => ({ ticket: trade.ticket, closeTime: (trade.closeTime ?? trade.openTime).toISOString(), profit: trade.profit, volume: trade.volume, symbol: trade.symbol })) }),
       });
       const data = await response.json();
-      if (!response.ok)
-        throw new Error(data?.error || `Erreur serveur (${response.status})`);
+      if (!response.ok) throw new Error(data?.error || `Erreur serveur (${response.status})`);
       setAnalysis(data.analysis as PsychAnalysis);
+      try { window.localStorage.setItem(cacheKey, JSON.stringify(data.analysis)); } catch { /* stockage facultatif */ }
     } catch (error) {
-      setAnalysisError(
-        error instanceof Error
-          ? error.message
-          : "Erreur inattendue lors de l'analyse.",
-      );
+      setAnalysisError(error instanceof Error ? error.message : "Erreur inattendue lors de l'analyse.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -529,6 +553,8 @@ export default function Home() {
       setGlobalAuditError(null);
       setSelectedTrade(result.trades[0] ?? null);
       setIsDemo(false);
+      const storedCapital = Number(window.localStorage.getItem("auditprop-capital"));
+      setCapitalInput(Number.isFinite(storedCapital) && storedCapital > 0 ? storedCapital : result.metrics.initialBalanceAssumed);
       setParseResult(result);
     },
     [],
@@ -582,6 +608,8 @@ export default function Home() {
       setGlobalAudit(null);
       setGlobalAuditError(null);
       setSelectedTrade(result.trades[0] ?? null);
+      const storedCapital = Number(window.localStorage.getItem("auditprop-capital"));
+      setCapitalInput(Number.isFinite(storedCapital) && storedCapital > 0 ? storedCapital : result.metrics.initialBalanceAssumed);
       setIsDemo(true);
       setParseResult(result);
     } catch (error) {
@@ -589,9 +617,12 @@ export default function Home() {
     }
   }, []);
 
+  const baseMetrics = parseResult?.metrics;
+  const metrics = useMemo(() => baseMetrics && parseResult ? recalculateMetrics(parseResult.trades, capitalInput) : undefined, [baseMetrics, parseResult, capitalInput]);
+
   useEffect(() => {
-    if (parseResult) void handleAnalyze(parseResult.metrics);
-  }, [parseResult, handleAnalyze]);
+    if (parseResult && metrics) void handleAnalyze(metrics, parseResult.trades);
+  }, [parseResult, metrics, handleAnalyze]);
   const reset = () => {
     setFile(null);
     setParseResult(null);
@@ -622,7 +653,6 @@ export default function Home() {
       setIsGeneratingAudit(false);
     }
   };
-  const metrics = parseResult?.metrics;
   const insights = useMemo(() => parseResult ? deriveInsights(parseResult.trades) : null, [parseResult]);
   const visibleEquity = useMemo(() => {
     if (!metrics || chartRange === "all") return metrics?.equityCurve ?? [];
@@ -842,6 +872,12 @@ export default function Home() {
                   transactions · {dateLabel(metrics.startDate)} →{" "}
                   {dateLabel(metrics.endDate)}
                 </p>
+                <div className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/[0.04] p-3">
+                  <label className="text-xs font-medium text-amber-100">Capital initial de référence ($)
+                    <input type="number" min="1" step="100" value={capitalInput} onChange={(event) => { const value = Math.max(1, Number(event.target.value) || 1); setCapitalInput(value); try { window.localStorage.setItem("auditprop-capital", String(value)); } catch { /* stockage facultatif */ } }} className="mt-2 block w-44 rounded-xl border border-amber-300/20 bg-black px-3 py-2 text-sm text-white outline-none focus:border-amber-300" />
+                  </label>
+                  <p className="max-w-md text-[11px] leading-5 text-zinc-400">Prioritaire pour les calculs. Détection automatique utilisée comme valeur de départ si le rapport contient un dépôt explicite.</p>
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2"><LiveBadge label="Flux FXMacroData : Connecté" /><LiveBadge label={isAnalyzing ? "Groq AI Engine : Analyse" : "Groq AI Engine : En ligne"} /></div>
               </div>
               <div className="flex items-center gap-2">
@@ -909,6 +945,8 @@ export default function Home() {
             {activeTab === "cockpit" && (
               <>
                 {insights && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><InsightCard label={insights.profitablePair ? "Paire la plus rentable" : "Aucune paire rentable"} value={insights.profitablePair?.[0] ?? "Aucune donnée positive"} detail={insights.profitablePair ? `${signed(insights.profitablePair[1])} $ net` : "Aucun PnL positif sur l'import"} tone={insights.profitablePair ? "good" : "neutral"} /><InsightCard label="Paire la plus déficitaire" value={insights.toxicPair?.[0] ?? "Donnée insuffisante"} detail={insights.toxicPair ? `${signed(insights.toxicPair[1])} $ net` : "Importez plusieurs trades"} tone="bad" /><InsightCard label="Pire jour de la semaine" value={insights.worstDay?.[0] ?? "Donnée insuffisante"} detail={insights.worstDay ? `${signed(insights.worstDay[1])} $ cumulé` : "Données insuffisantes"} tone="bad" /><InsightCard label={insights.bestSession ? "Session positive" : "Aucune session positive"} value={insights.bestSession?.[0] ?? "Aucune donnée positive"} detail={insights.bestSession ? `${signed(insights.bestSession[1])} $ cumulé` : "Aucun PnL positif sur l'import"} tone={insights.bestSession ? "good" : "neutral"} /></div>}
+                {metrics.totalTrades < 5 && <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-xs text-amber-100">Échantillon trop faible : les statistiques par paire et par horaire sont indicatives avec moins de 5 trades.</div>}
+                {metrics.abnormalSizingAlert && <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-3 text-xs text-rose-100">Sizing anormal détecté : {metrics.abnormalSizingCount} variation(s) d’au moins 5× autour du volume moyen. Vérifiez le risque d’over-leveraging ou de martingale.</div>}
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   <StatCard
                     label="P&L total"
@@ -1062,7 +1100,7 @@ export default function Home() {
                           {analysisError}
                         </div>
                         <button
-                          onClick={() => handleAnalyze(metrics)}
+                          onClick={() => handleAnalyze(metrics, parseResult.trades)}
                           className="rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300"
                         >
                           Réessayer

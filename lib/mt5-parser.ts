@@ -88,6 +88,9 @@ export interface MT5Metrics {
   startDate: string | null;
   endDate: string | null;
   symbolsTraded: string[];
+  averageVolume: number;
+  abnormalSizingCount: number;
+  abnormalSizingAlert: boolean;
 }
 
 export interface MT5ParseResult {
@@ -626,6 +629,13 @@ function computeMetrics(
 
   const bestTrade = totalTrades > 0 ? round2(Math.max(...trades.map((t) => t.profit))) : 0;
   const worstTrade = totalTrades > 0 ? round2(Math.min(...trades.map((t) => t.profit))) : 0;
+  const averageVolume = totalTrades > 0 ? trades.reduce((sum, trade) => sum + trade.volume, 0) / totalTrades : 0;
+  const typicalVolumes = trades.filter((trade) => trade.volume > 0).map((trade) => trade.volume);
+  const sortedVolumes = [...typicalVolumes].sort((a, b) => a - b);
+  const typicalVolume = sortedVolumes.length > 0 ? sortedVolumes[Math.floor(sortedVolumes.length / 2)] : 0;
+  const abnormalSizingCount = typicalVolume > 0
+    ? trades.filter((trade) => trade.volume >= typicalVolume * 5 || trade.volume <= typicalVolume / 5).length
+    : 0;
 
   // --- Courbe de capital + Max Drawdown ---------------------------------
   let equity = initialBalanceAssumed;
@@ -637,7 +647,7 @@ function computeMetrics(
     {
       index: 0,
       ticket: "INIT",
-      time: trades[0]?.openTime.toISOString() ?? new Date().toISOString(),
+      time: ((trades[0]?.closeTime ?? trades[0]?.openTime) ?? new Date()).toISOString(),
       equity: round2(equity),
       profit: 0,
     },
@@ -655,7 +665,7 @@ function computeMetrics(
     equityCurve.push({
       index: i + 1,
       ticket: t.ticket,
-      time: t.openTime.toISOString(),
+      time: (t.closeTime ?? t.openTime).toISOString(),
       equity: round2(equity),
       profit: round2(t.profit),
     });
@@ -670,7 +680,7 @@ function computeMetrics(
     if (t.profit < 0) {
       currentStreak.push(t);
       if (currentStreak.length > maxStreak.length) maxStreak = [...currentStreak];
-    } else {
+    } else if (t.profit > 0) {
       if (currentStreak.length >= SIGNIFICANT_STREAK_LENGTH) significantStreaks++;
       currentStreak = [];
     }
@@ -684,8 +694,8 @@ function computeMetrics(
           totalLoss: round2(maxStreak.reduce((s, t) => s + t.profit, 0)),
           startTicket: maxStreak[0].ticket,
           endTicket: maxStreak[maxStreak.length - 1].ticket,
-          startTime: maxStreak[0].openTime.toISOString(),
-          endTime: maxStreak[maxStreak.length - 1].openTime.toISOString(),
+          startTime: (maxStreak[0].closeTime ?? maxStreak[0].openTime).toISOString(),
+          endTime: (maxStreak[maxStreak.length - 1].closeTime ?? maxStreak[maxStreak.length - 1].openTime).toISOString(),
         }
       : null;
 
@@ -727,9 +737,12 @@ function computeMetrics(
     postLossResponseWindowMinutes: POST_LOSS_RESPONSE_WINDOW_MINUTES,
     equityCurve,
     initialBalanceAssumed,
-    startDate: trades[0]?.openTime.toISOString() ?? null,
-    endDate: trades[trades.length - 1]?.openTime.toISOString() ?? null,
+    startDate: (trades[0]?.closeTime ?? trades[0]?.openTime)?.toISOString() ?? null,
+    endDate: (trades[trades.length - 1]?.closeTime ?? trades[trades.length - 1]?.openTime)?.toISOString() ?? null,
     symbolsTraded,
+    averageVolume: round2(averageVolume),
+    abnormalSizingCount,
+    abnormalSizingAlert: abnormalSizingCount > 0,
   };
 }
 
@@ -770,7 +783,7 @@ export function parseMT5History(rawContent: string): MT5ParseResult {
   for (const t of rawTrades) uniqueMap.set(t.ticket, t);
 
   const trades = Array.from(uniqueMap.values()).sort(
-    (a, b) => a.openTime.getTime() - b.openTime.getTime()
+    (a, b) => (a.closeTime ?? a.openTime).getTime() - (b.closeTime ?? b.openTime).getTime()
   );
 
   const metrics = computeMetrics(trades, balanceHint);
@@ -783,6 +796,10 @@ export function parseMT5History(rawContent: string): MT5ParseResult {
     broker: detectBroker(rawContent),
   };
 }
-
 /** Même moteur déterministe, nommé explicitement pour l'import multi-sources. */
 export const parseUniversalHistory = parseMT5History;
+
+/** Recalcule les métriques d'un résultat avec un capital manuel prioritaire. */
+export function recalculateMetrics(trades: MT5Trade[], initialBalance: number): MT5Metrics {
+  return computeMetrics(trades, Number.isFinite(initialBalance) && initialBalance > 0 ? initialBalance : DEFAULT_INITIAL_BALANCE);
+}

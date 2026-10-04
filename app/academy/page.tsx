@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, Brain, CheckCircle2, ChevronDown, Calculator, ShieldCheck, Target, TrendingDown } from "lucide-react";
 import SiteNav from "@/components/site-nav";
 
@@ -12,7 +12,7 @@ const rules = [
 ] as const;
 const firms = [
   { name: "FTMO", daily: 5, total: 10, consistency: "Selon programme" },
-  { name: "Topstep", daily: 5, total: 10, consistency: "Règle de constance" },
+  { name: "Topstep", daily: "—", total: "—", consistency: "Futures · limites en dollars selon la taille du compte (50K : 2 000 $) · consistance 50 % en Combine · à confirmer sur le site officiel" },
   { name: "Funding Pips", daily: 5, total: 10, consistency: "Selon programme" },
   { name: "FundedNext", daily: 5, total: 10, consistency: "Selon programme" },
 ] as const;
@@ -31,6 +31,10 @@ export default function AcademyPage() {
   const [pipValue, setPipValue] = useState(10);
   const [firmFilter, setFirmFilter] = useState("Toutes");
   const [checked, setChecked] = useState<boolean[]>(Array(checklist.length).fill(false));
+  useEffect(() => {
+    const stored = Number(window.localStorage.getItem("auditprop-capital"));
+    if (Number.isFinite(stored) && stored > 0) setCapital(stored);
+  }, []);
   const positionSize = useMemo(() => stop > 0 ? (capital * risk / 100) / (stop * pipValue) : 0, [capital, risk, stop, pipValue]);
   return <main className="min-h-screen bg-[#09090b] text-zinc-100"><SiteNav /><div className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
     <header className="border-b border-white/[0.07] py-12 sm:py-16"><p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-400">Académie Trading OS</p><h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">Maîtriser les règles. Stabiliser le comportement.</h1><p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-400">Outils interactifs pour calibrer le risque à partir de vos choix réels. Les règles Prop Firm sont une couche optionnelle du moteur de décision.</p></header>

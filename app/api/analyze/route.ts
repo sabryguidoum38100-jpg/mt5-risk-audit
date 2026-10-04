@@ -70,7 +70,17 @@ export interface PsychAnalysis {
 // Construction du prompt
 // ---------------------------------------------------------------------------
 
-function buildPrompt(metrics: MT5Metrics): string {
+interface ClosureContext {
+  ticket: string;
+  closeTime: string;
+  profit: number;
+  volume: number;
+  symbol: string;
+}
+
+function buildPrompt(metrics: MT5Metrics, closureContext: ClosureContext[] = []): string {
+  const closureOrder = closureContext.map((trade, index) => ({ order: index + 1, ...trade }));
+  const lastClosed = closureOrder.at(-1) ?? null;
   return `
 Tu es un analyste comportemental spécialisé dans le trading pour compte propre ("prop firm" — FTMO, FundedNext, The5ers, etc.) et la psychologie du trading.
 
@@ -85,6 +95,11 @@ CONTEXTE À PRENDRE EN COMPTE :
 - "maxLosingStreak" décrit la pire série de pertes consécutives du trader.
 - "maxDrawdownPercent" (${metrics.maxDrawdownPercent} %) est calculé sur une courbe d'équité qui part d'un solde de départ de ${metrics.initialBalanceAssumed} (détecté dans le fichier, ou estimé par défaut si absent).
 - "significantLosingStreaks" compte le nombre de séries de 3 pertes consécutives ou plus.
+- "abnormalSizingCount" vaut ${metrics.abnormalSizingCount} et "abnormalSizingAlert" vaut ${metrics.abnormalSizingAlert} : une variation d'au moins 5× autour du volume moyen est un signal prioritaire de sizing non maîtrisé, sans inventer de cause.
+- Bornes exactes du rapport : startDate=${metrics.startDate ?? "inconnue"}, endDate=${metrics.endDate ?? "inconnue"}. Ne jamais extrapoler au-delà de ces bornes.
+- Ordre exact des clôtures (close_time) : ${JSON.stringify(closureOrder)}
+- Dernière transaction clôturée : ${JSON.stringify(lastClosed)}
+CONSIGNE TEMPORELLE STRICTE : interdiction de supposer un rebond si la perte maximale se situe sur la dernière transaction clôturée. Ne pas extrapoler les dates au-delà des bornes fournies et ne pas décrire un événement postérieur au dernier close_time.
 
 TA MISSION :
 1. Évalue un score de risque comportemental global de 0 (discipline exemplaire) à 100 (risque élevé de destruction de compte).
@@ -119,7 +134,7 @@ async function generateWithRetry(groq: Groq, prompt: string) {
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.4,
+        temperature: 0.1,
         response_format: { type: "json_object" },
       });
     } catch (error) {
@@ -166,6 +181,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => null);
     const metrics = body?.metrics as MT5Metrics | undefined;
+    const closureContext = Array.isArray(body?.closureContext) ? (body.closureContext as ClosureContext[]) : [];
 
     if (!metrics || typeof metrics.totalTrades !== "number") {
       return NextResponse.json(
@@ -178,7 +194,7 @@ export async function POST(request: NextRequest) {
     }
 
     const groq = new Groq({ apiKey });
-    const prompt = buildPrompt(metrics);
+    const prompt = buildPrompt(metrics, closureContext);
     const response = await generateWithRetry(groq, prompt);
 
     const rawText = response.choices[0]?.message?.content;

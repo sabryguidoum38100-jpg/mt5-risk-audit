@@ -93,6 +93,11 @@ function impactFor(title: string, summary: string | null): MacroImpact {
   return "low";
 }
 
+const MACRO_KEYWORDS = /\b(rate|rates|inflation|CPI|Fed|ECB|payrolls|jobs|GDP|unemployment|FOMC|yields)\b/i;
+function isMacroArticle(item: MacroItem) {
+  return MACRO_KEYWORDS.test(`${item.title} ${item.summary ?? ""}`);
+}
+
 async function fetchCalendarCurrency(
   currency: (typeof CALENDAR_CURRENCIES)[number],
 ): Promise<MacroItem[]> {
@@ -214,7 +219,8 @@ export async function GET() {
         new Date(b.publishedAt ?? 0).getTime() -
         new Date(a.publishedAt ?? 0).getTime(),
     );
-  const articles = items.filter((item) => item.kind === "news").slice(0, 10);
+  const filteredArticles = items.filter((item) => item.kind === "news").filter(isMacroArticle);
+  const articles = filteredArticles.slice(0, 10);
   const calendar = items
     .filter((item) => item.kind === "calendar")
     .filter(
@@ -230,7 +236,7 @@ export async function GET() {
     .slice(0, 80);
   let marketSummary: string | null = null;
   try {
-    marketSummary = await summarize(articles);
+    marketSummary = articles.length >= 3 ? await summarize(articles) : null;
   } catch (error) {
     console.error("[api/macro-news] Groq summary error:", error);
   }
@@ -241,6 +247,7 @@ export async function GET() {
       articles,
       calendar,
       marketSummary,
+      macroWarning: articles.length < 3 ? "Pas assez d’actualités macro" : null,
     },
     { headers: { "Cache-Control": "no-store, max-age=0" } },
   );

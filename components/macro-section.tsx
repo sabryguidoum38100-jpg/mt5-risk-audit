@@ -28,6 +28,7 @@ interface MacroResponse {
   articles: MacroItem[];
   calendar: MacroItem[];
   marketSummary: string | null;
+  macroWarning?: string | null;
   error?: string;
 }
 
@@ -152,8 +153,8 @@ export default function MacroSection() {
                   marché
                 </div>
                 <p className="mt-4 text-sm leading-7 text-zinc-300">
-                  {data.marketSummary ??
-                    "Résumé IA indisponible : la clé GROQ_API_KEY n'est pas configurée ou aucun article n'a été récupéré."}
+                  {data.marketSummary ?? data.macroWarning ??
+                    "Résumé IA indisponible : aucun flux macro exploitable n'a été récupéré."}
                 </p>
                 <p className="mt-5 text-[11px] text-zinc-600">
                   Actualisé le {formatDate(data.fetchedAt)} · {data.sources}{" "}

@@ -24,6 +24,7 @@ interface CalendarItem {
 interface MacroPayload {
   calendar: CalendarItem[];
   marketSummary: string | null;
+  macroWarning?: string | null;
   fetchedAt: string;
   sources: number;
 }
@@ -138,8 +139,8 @@ export default function MacroPage() {
                 globale
               </div>
               <p className="mt-4 max-w-4xl text-base leading-8 text-zinc-300">
-                {data.marketSummary ??
-                  "Le brief IA n'est pas disponible. Vérifiez GROQ_API_KEY ou relancez l'analyse."}
+                {data.marketSummary ?? data.macroWarning ??
+                  "Le brief IA n'est pas disponible. Relancez l'analyse lorsque des articles macro seront disponibles."}
               </p>
               <p className="mt-5 text-[11px] text-zinc-600">
                 Brief généré à partir des actualités live · {data.sources} flux
