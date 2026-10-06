@@ -960,11 +960,13 @@ export default function Home() {
                   />
                   <StatCard
                     label="Max drawdown"
-                    value={`${metrics.maxDrawdownPercent.toFixed(1)}%`}
-                    detail={`${signed(-metrics.maxDrawdownAbsolute)} $`}
+                    value={metrics.initialBalanceDetected ? `${metrics.maxDrawdownPercent.toFixed(1)}%` : "—"}
+                    detail={metrics.initialBalanceDetected ? `${signed(-metrics.maxDrawdownAbsolute)} $` : "Capital requis"}
                     icon={Activity}
                     tone={
-                      metrics.maxDrawdownPercent > 10
+                      !metrics.initialBalanceDetected
+                        ? "neutral"
+                        : metrics.maxDrawdownPercent > 10
                         ? "bad"
                         : metrics.maxDrawdownPercent > 5
                           ? "warn"
