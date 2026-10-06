@@ -336,8 +336,9 @@ function PropRulesChecker({ metrics }: { metrics: MT5Metrics }) {
   const dailyLimit = (capital * rules.daily) / 100;
   const totalLimit = (capital * rules.total) / 100;
   const drawdownValue = (capital * metrics.maxDrawdownPercent) / 100;
-  const compliant = metrics.maxDrawdownPercent <= rules.total;
-  const nearLimit = metrics.maxDrawdownPercent > rules.daily && compliant;
+  const hasCapital = metrics.initialBalanceDetected;
+  const compliant = hasCapital && metrics.maxDrawdownPercent <= rules.total;
+  const nearLimit = hasCapital && metrics.maxDrawdownPercent > rules.daily && compliant;
   return (
     <section className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-2xl shadow-black/10 sm:p-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -352,7 +353,7 @@ function PropRulesChecker({ metrics }: { metrics: MT5Metrics }) {
         <span
           className={`rounded-full px-3 py-1.5 text-xs font-semibold ${compliant ? "bg-emerald-400/10 text-emerald-300" : "bg-rose-400/10 text-rose-300"}`}
         >
-          {compliant ? "Dans les limites" : "Action requise"}
+          {!hasCapital ? "Capital requis" : compliant ? "Dans les limites" : "Action requise"}
         </span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -423,11 +424,12 @@ function PropRulesChecker({ metrics }: { metrics: MT5Metrics }) {
         </div>
         <div>
           <p className="text-sm font-medium text-white">
-            Drawdown extrait : {metrics.maxDrawdownPercent.toFixed(1)}% (
-            {money(drawdownValue)})
+            {hasCapital ? <>Drawdown extrait : {metrics.maxDrawdownPercent.toFixed(1)}% ({money(drawdownValue)})</> : "Drawdown extrait : —"}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-zinc-400">
-            {compliant
+            {!hasCapital
+              ? "Saisissez le capital initial pour calculer le drawdown en pourcentage et la conformité."
+              : compliant
               ? nearLimit
                 ? "Vous êtes sous la limite totale, mais votre drawdown dépasse déjà le seuil quotidien de référence."
                 : "Votre historique reste sous les limites configurées pour ce challenge."

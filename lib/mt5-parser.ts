@@ -701,6 +701,7 @@ function computeMetrics(
   // --- Courbe de capital + Max Drawdown ---------------------------------
   let equity = initialBalanceAssumed;
   let peak = initialBalanceAssumed;
+  const hasInitialBalance = initialBalanceAssumed > 0;
   let maxDDPercent = 0;
   let maxDDAbsolute = 0;
 
@@ -718,11 +719,9 @@ function computeMetrics(
     equity += t.profit;
     if (equity > peak) peak = equity;
     const ddAbs = peak - equity;
-    const ddPct = peak > 0 ? (ddAbs / peak) * 100 : 0;
-    if (ddPct > maxDDPercent) {
-      maxDDPercent = ddPct;
-      maxDDAbsolute = ddAbs;
-    }
+    const ddPct = hasInitialBalance && peak > 0 ? (ddAbs / peak) * 100 : 0;
+    if (ddAbs > maxDDAbsolute) maxDDAbsolute = ddAbs;
+    if (ddPct > maxDDPercent) maxDDPercent = ddPct;
     equityCurve.push({
       index: i + 1,
       ticket: t.ticket,
