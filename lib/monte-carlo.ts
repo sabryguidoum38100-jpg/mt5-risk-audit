@@ -27,6 +27,18 @@ function createSeededRandom(seed: number) {
   };
 }
 
+function hashTrades(trades: MT5Trade[]): number {
+  let hash = 2166136261;
+  for (const trade of trades) {
+    const serialized = `${trade.ticket}|${trade.openTime.toISOString()}|${trade.closeTime?.toISOString() ?? ""}|${trade.symbol}|${trade.volume}|${trade.profit}`;
+    for (let index = 0; index < serialized.length; index += 1) {
+      hash ^= serialized.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+  }
+  return hash >>> 0;
+}
+
 export function projectMonteCarlo(trades: MT5Trade[], metrics: MT5Metrics, simulations = 1000, horizon = 100): MonteCarloProjection {
   const wins = trades.filter((trade) => trade.profit > 0).map((trade) => trade.profit);
   const losses = trades.filter((trade) => trade.profit < 0).map((trade) => Math.abs(trade.profit));
@@ -36,7 +48,7 @@ export function projectMonteCarlo(trades: MT5Trade[], metrics: MT5Metrics, simul
   const riskReward = averageLoss ? averageWin / averageLoss : null;
   if (!trades.length || (!wins.length && !losses.length)) return { simulations, horizon, successProbability: 0, medianReturn: 0, medianDrawdown: 0, p90Drawdown: 0, worstDrawdown: 0, expectedFinalPnL: 0, winRate, riskReward };
   const simulationWinRate = (wins.length + 1) / (trades.length + 2);
-  const random = createSeededRandom(Math.round(metrics.totalPnL * 100) + trades.length * 7919);
+  const random = createSeededRandom(hashTrades(trades));
   const finalPnLs: number[] = [];
   const drawdowns: number[] = [];
   for (let simulation = 0; simulation < simulations; simulation += 1) {

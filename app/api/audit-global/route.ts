@@ -3,6 +3,7 @@ import Groq from "groq-sdk";
 
 export const runtime = "nodejs";
 const MODEL = "openai/gpt-oss-120b";
+const NEGATIVE_BIAS_WORDS = /biais|sur[- ]?réactiv|perte|drawdown|surtrading|overtrading|hors[- ]?plan|fomo|sizing|lot|risque|discipline insuffisante|pression d'exécution|compensation/i;
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.GROQ_API_KEY;
@@ -23,7 +24,18 @@ export async function POST(request: NextRequest) {
     });
     const content = response.choices[0]?.message?.content?.trim() ?? "";
     const cleaned = content.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
-    return NextResponse.json(JSON.parse(cleaned));
+    const parsed = JSON.parse(cleaned) as { summary?: string; strengths?: unknown; weaknesses?: unknown; actionPlan?: unknown };
+    const weaknesses = Array.isArray(parsed.weaknesses) ? parsed.weaknesses.filter((item): item is string => typeof item === "string") : [];
+    const weaknessTokens = weaknesses.flatMap((item) => item.toLowerCase().split(/\W+/).filter((token) => token.length > 4));
+    const strengths = Array.isArray(parsed.strengths)
+      ? parsed.strengths.filter((item): item is string => typeof item === "string" && !NEGATIVE_BIAS_WORDS.test(item) && !weaknessTokens.some((token) => item.toLowerCase().includes(token)))
+      : [];
+    return NextResponse.json({
+      summary: typeof parsed.summary === "string" ? parsed.summary : "",
+      strengths,
+      weaknesses,
+      actionPlan: Array.isArray(parsed.actionPlan) ? parsed.actionPlan.filter((item): item is string => typeof item === "string") : [],
+    });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Audit IA indisponible." }, { status: 502 });
   }

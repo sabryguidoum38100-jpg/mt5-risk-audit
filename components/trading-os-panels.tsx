@@ -9,7 +9,7 @@ import type { MonteCarloProjection } from "@/lib/monte-carlo";
 const TAGS = ["#FOMO", "#HorsPlan", "#Breakout", "#Sur-réaction", "#PressionExecution"] as const;
 type TradeTag = typeof TAGS[number];
 
-function money(value: number) { return `${value >= 0 ? "+" : ""}${value.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} $`; }
+function money(value: number) { return `${value >= 0 ? "+" : ""}${value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`; }
 function escapeXml(value: string) { return value.replace(/[<>&'\"]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "’", '\"': "&quot;" }[char] ?? char)); }
 
 export function MonteCarloPanel({ projection }: { projection: MonteCarloProjection }) {

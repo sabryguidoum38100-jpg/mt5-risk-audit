@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import type { MT5Metrics } from "@/lib/mt5-parser";
+import { calculatePsychologicalScore } from "@/lib/psych-score";
 
 export const runtime = "nodejs";
 
@@ -96,20 +97,19 @@ CONTEXTE À PRENDRE EN COMPTE :
 - "maxDrawdownPercent" (${metrics.maxDrawdownPercent} %) est calculé sur une courbe d'équité qui part d'un solde de départ de ${metrics.initialBalanceAssumed} (détecté dans le fichier, ou estimé par défaut si absent).
 - "significantLosingStreaks" compte le nombre de séries de 3 pertes consécutives ou plus.
 - "abnormalSizingCount" vaut ${metrics.abnormalSizingCount} et "abnormalSizingAlert" vaut ${metrics.abnormalSizingAlert} : une variation d'au moins 5× autour du volume moyen est un signal prioritaire de sizing non maîtrisé, sans inventer de cause.
+- Alertes de sizing rédigées par le moteur déterministe : ${metrics.sizingAlerts.length ? metrics.sizingAlerts.map((alert) => alert.message).join(" | ") : "aucun saut temporel détecté"}. Reprends ces phrases telles quelles si tu décris le sizing, sans fabriquer de ratio générique.
 - Bornes exactes du rapport : startDate=${metrics.startDate ?? "inconnue"}, endDate=${metrics.endDate ?? "inconnue"}. Ne jamais extrapoler au-delà de ces bornes.
 - Ordre exact des clôtures (close_time) : ${JSON.stringify(closureOrder)}
 - Dernière transaction clôturée : ${JSON.stringify(lastClosed)}
 CONSIGNE TEMPORELLE STRICTE : interdiction de supposer un rebond si la perte maximale se situe sur la dernière transaction clôturée. Ne pas extrapoler les dates au-delà des bornes fournies et ne pas décrire un événement postérieur au dernier close_time.
 
 TA MISSION :
-1. Évalue un score de risque comportemental global de 0 (discipline exemplaire) à 100 (risque élevé de destruction de compte).
-2. Détecte les biais observables STRICTEMENT à partir des métriques (sur-réactivité post-perte, surtrading, absence de gestion du risque après une perte, etc.) — n'invente rien qui ne soit pas suggéré par les chiffres fournis.
-3. Donne une alerte claire et chiffrée sur le risque de dépassement des limites de drawdown d'une prop firm au vu du drawdown déjà observé.
-4. Propose des recommandations comportementales concrètes et actionnables (pas de généralités vagues type "sois discipliné").
+1. Détecte les biais observables STRICTEMENT à partir des métriques (sur-réactivité post-perte, surtrading, absence de gestion du risque après une perte, etc.) — n'invente rien qui ne soit pas suggéré par les chiffres fournis.
+2. Donne une alerte claire et chiffrée sur le risque de dépassement des limites de drawdown d'une prop firm au vu du drawdown déjà observé.
+3. Propose des recommandations comportementales concrètes et actionnables (pas de généralités vagues type "sois discipliné").
 
 Réponds STRICTEMENT en JSON valide, sans balises markdown ni texte autour, en suivant exactement ce schéma :
 {
-  "riskScore": number,
   "summary": string,
   "biasesDetected": [ { "name": string, "severity": "low" | "medium" | "high", "description": string } ],
   "drawdownAlert": { "level": "ok" | "warning" | "critical", "message": string },
@@ -202,9 +202,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Réponse vide reçue de Groq." }, { status: 502 });
     }
 
-    let analysis: PsychAnalysis;
+    let analysis: Omit<PsychAnalysis, "riskScore">;
     try {
-      analysis = JSON.parse(rawText);
+      analysis = JSON.parse(rawText) as Omit<PsychAnalysis, "riskScore">;
     } catch {
       return NextResponse.json(
         {
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ analysis }, { status: 200 });
+    return NextResponse.json({ analysis: { ...analysis, riskScore: calculatePsychologicalScore(metrics) } }, { status: 200 });
   } catch (err) {
     console.error("[api/analyze] Erreur :", err);
     const message =

@@ -91,6 +91,18 @@ export interface MT5Metrics {
   averageVolume: number;
   abnormalSizingCount: number;
   abnormalSizingAlert: boolean;
+  sizingAlerts: SizingAlert[];
+  smallSampleSymbols: string[];
+  initialBalanceDetected: boolean;
+}
+
+export interface SizingAlert {
+  kind: "too-large" | "too-small";
+  fromVolume: number;
+  toVolume: number;
+  elapsedSeconds: number;
+  medianVolume: number;
+  message: string;
 }
 
 export interface MT5ParseResult {
@@ -113,7 +125,6 @@ export class MT5ParserError extends Error {
 // ---------------------------------------------------------------------------
 
 const POST_LOSS_RESPONSE_WINDOW_MINUTES = 5;
-const DEFAULT_INITIAL_BALANCE = 10000;
 const SIGNIFICANT_STREAK_LENGTH = 3;
 
 type HeaderRole =
@@ -172,6 +183,12 @@ const EXCLUDED_TYPE_KEYWORDS = [
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+function formatNumber(value: number): string {
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function normalize(str: string): string {
@@ -610,7 +627,7 @@ function computeMetrics(
   const initialBalanceAssumed =
     initialBalanceHint && initialBalanceHint > 0
       ? round2(initialBalanceHint)
-      : DEFAULT_INITIAL_BALANCE;
+      : 0;
 
   const totalTrades = trades.length;
   const wins = trades.filter((t) => t.profit > 0);
@@ -632,10 +649,54 @@ function computeMetrics(
   const averageVolume = totalTrades > 0 ? trades.reduce((sum, trade) => sum + trade.volume, 0) / totalTrades : 0;
   const typicalVolumes = trades.filter((trade) => trade.volume > 0).map((trade) => trade.volume);
   const sortedVolumes = [...typicalVolumes].sort((a, b) => a - b);
-  const typicalVolume = sortedVolumes.length > 0 ? sortedVolumes[Math.floor(sortedVolumes.length / 2)] : 0;
-  const abnormalSizingCount = typicalVolume > 0
-    ? trades.filter((trade) => trade.volume >= typicalVolume * 5 || trade.volume <= typicalVolume / 5).length
-    : 0;
+  const medianVolume = sortedVolumes.length > 0 ? sortedVolumes[Math.floor((sortedVolumes.length - 1) / 2)] : 0;
+  const sizingAlerts: SizingAlert[] = [];
+  const openingChronological = [...trades].sort((a, b) => a.openTime.getTime() - b.openTime.getTime());
+  const minimumVolume = sortedVolumes[0] ?? 0;
+  let previousDistinct = openingChronological[0] ?? null;
+  for (let i = 1; i < openingChronological.length; i += 1) {
+    const current = openingChronological[i];
+    if (!previousDistinct || current.volume === previousDistinct.volume) continue;
+    const previous = previousDistinct;
+    const previousTime = previous.openTime.getTime();
+    const currentTime = current.openTime.getTime();
+    const elapsedSeconds = Math.round((currentTime - previousTime) / 1000);
+    if (!medianVolume || elapsedSeconds < 0 || elapsedSeconds > 120) continue;
+    const ratio = current.volume / previous.volume;
+    if (current.volume === previous.volume) continue;
+    const kind = (ratio >= 5 && current.volume >= medianVolume) || current.volume >= medianVolume * 2
+      ? "too-large"
+      : current.volume !== minimumVolume && (ratio <= 0.2 || current.volume <= medianVolume / 5)
+        ? "too-small"
+        : null;
+    if (!kind) continue;
+    const direction = kind === "too-large" ? "trop gros" : "trop petit";
+    sizingAlerts.push({
+      kind,
+      fromVolume: previous.volume,
+      toVolume: current.volume,
+      elapsedSeconds,
+      medianVolume: round2(medianVolume),
+      message: `Lot ${direction} : lot passé de ${formatNumber(previous.volume)} à ${formatNumber(current.volume)} en ${elapsedSeconds} secondes (médiane : ${formatNumber(medianVolume)}).`,
+    });
+    previousDistinct = current;
+  }
+  for (let i = 1; i < openingChronological.length; i += 1) {
+    const previous = openingChronological[i - 1];
+    const current = openingChronological[i];
+    const elapsedSeconds = Math.round((current.openTime.getTime() - previous.openTime.getTime()) / 1000);
+    if (elapsedSeconds < 0 || elapsedSeconds > 120 || current.volume < medianVolume * 2 || current.volume === previous.volume) continue;
+    if (sizingAlerts.some((alert) => alert.fromVolume === previous.volume && alert.toVolume === current.volume && alert.elapsedSeconds === elapsedSeconds)) continue;
+    sizingAlerts.push({
+      kind: "too-large",
+      fromVolume: previous.volume,
+      toVolume: current.volume,
+      elapsedSeconds,
+      medianVolume: round2(medianVolume),
+      message: `Lot trop gros : lot passé de ${formatNumber(previous.volume)} à ${formatNumber(current.volume)} en ${elapsedSeconds} secondes (médiane : ${formatNumber(medianVolume)}).`,
+    });
+  }
+  const abnormalSizingCount = sizingAlerts.length;
 
   // --- Courbe de capital + Max Drawdown ---------------------------------
   let equity = initialBalanceAssumed;
@@ -717,6 +778,9 @@ function computeMetrics(
   }
 
   const symbolsTraded = Array.from(new Set(trades.map((t) => t.symbol))).sort();
+  const symbolCounts = new Map<string, number>();
+  for (const trade of trades) symbolCounts.set(trade.symbol, (symbolCounts.get(trade.symbol) ?? 0) + 1);
+  const smallSampleSymbols = symbolsTraded.filter((symbol) => (symbolCounts.get(symbol) ?? 0) < 5);
 
   return {
     totalTrades,
@@ -743,6 +807,9 @@ function computeMetrics(
     averageVolume: round2(averageVolume),
     abnormalSizingCount,
     abnormalSizingAlert: abnormalSizingCount > 0,
+    sizingAlerts,
+    smallSampleSymbols,
+    initialBalanceDetected: Boolean(initialBalanceHint && initialBalanceHint > 0),
   };
 }
 
@@ -801,5 +868,5 @@ export const parseUniversalHistory = parseMT5History;
 
 /** Recalcule les métriques d'un résultat avec un capital manuel prioritaire. */
 export function recalculateMetrics(trades: MT5Trade[], initialBalance: number): MT5Metrics {
-  return computeMetrics(trades, Number.isFinite(initialBalance) && initialBalance > 0 ? initialBalance : DEFAULT_INITIAL_BALANCE);
+  return computeMetrics(trades, Number.isFinite(initialBalance) && initialBalance > 0 ? initialBalance : undefined);
 }

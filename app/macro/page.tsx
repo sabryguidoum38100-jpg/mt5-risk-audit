@@ -184,11 +184,11 @@ export default function MacroPage() {
                 </div>
               </div>
               <div className="mt-5 overflow-hidden rounded-2xl border border-white/[0.08]">
-                <div className="hidden grid-cols-[1.3fr_0.45fr_0.7fr_0.8fr] gap-4 border-b border-white/[0.08] bg-white/[0.03] px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-600 sm:grid">
-                  <span>Événement</span>
-                  <span>Devise</span>
-                  <span>Impact</span>
-                  <span>Publication</span>
+                <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,0.45fr)_minmax(0,0.7fr)_minmax(0,0.8fr)] gap-4 border-b border-white/[0.08] bg-white/[0.03] px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-600 sm:grid">
+                  <span className="min-w-0">Événement</span>
+                  <span className="min-w-0">Devise</span>
+                  <span className="min-w-0">Impact</span>
+                  <span className="min-w-0">Publication</span>
                 </div>
                 {events.length > 0 ? (
                   events.map((item, index) => (
@@ -196,10 +196,10 @@ export default function MacroPage() {
                       key={`${item.link}-${index}`}
                       type="button"
                       onClick={() => void openEvent(item)}
-                      className="grid gap-2 border-b border-white/[0.07] px-4 py-4 transition last:border-0 hover:bg-white/[0.03] sm:grid-cols-[1.3fr_0.45fr_0.7fr_0.8fr] sm:items-center sm:gap-4"
+                      className="grid min-w-0 gap-2 border-b border-white/[0.07] px-4 py-4 transition last:border-0 hover:bg-white/[0.03] sm:grid-cols-[minmax(0,1.3fr)_minmax(0,0.45fr)_minmax(0,0.7fr)_minmax(0,0.8fr)] sm:items-center sm:gap-4"
                     >
-                      <div>
-                        <p className="text-sm font-medium text-zinc-200">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-medium leading-5 text-zinc-200">
                           {item.title}
                         </p>
                         <p className="mt-1 text-xs text-zinc-600">

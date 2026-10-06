@@ -170,7 +170,7 @@ const FIRM_RULES: Record<
 };
 
 function money(value: number): string {
-  return value.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " $";
+  return value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
 }
 
 function signed(value: number): string {
@@ -505,12 +505,7 @@ export default function Home() {
   const [selectedTrade, setSelectedTrade] = useState<MT5Trade | null>(null);
   const [propFirmEnabled, setPropFirmEnabled] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
-  const [capitalInput, setCapitalInput] = useState(10000);
-
-  useEffect(() => {
-    const stored = Number(window.localStorage.getItem("auditprop-capital"));
-    if (Number.isFinite(stored) && stored > 0) setCapitalInput(stored);
-  }, []);
+  const [capitalInput, setCapitalInput] = useState<number | "">("");
 
   const handleAnalyze = useCallback(async (metrics: MT5Metrics, trades: MT5Trade[]) => {
     setIsAnalyzing(true);
@@ -553,8 +548,8 @@ export default function Home() {
       setGlobalAuditError(null);
       setSelectedTrade(result.trades[0] ?? null);
       setIsDemo(false);
-      const storedCapital = Number(window.localStorage.getItem("auditprop-capital"));
-      setCapitalInput(Number.isFinite(storedCapital) && storedCapital > 0 ? storedCapital : result.metrics.initialBalanceAssumed);
+      window.localStorage.removeItem("auditprop-capital");
+      setCapitalInput(result.metrics.initialBalanceDetected ? result.metrics.initialBalanceAssumed : "");
       setParseResult(result);
     },
     [],
@@ -608,8 +603,8 @@ export default function Home() {
       setGlobalAudit(null);
       setGlobalAuditError(null);
       setSelectedTrade(result.trades[0] ?? null);
-      const storedCapital = Number(window.localStorage.getItem("auditprop-capital"));
-      setCapitalInput(Number.isFinite(storedCapital) && storedCapital > 0 ? storedCapital : result.metrics.initialBalanceAssumed);
+      window.localStorage.removeItem("auditprop-capital");
+      setCapitalInput(result.metrics.initialBalanceDetected ? result.metrics.initialBalanceAssumed : "");
       setIsDemo(true);
       setParseResult(result);
     } catch (error) {
@@ -618,7 +613,7 @@ export default function Home() {
   }, []);
 
   const baseMetrics = parseResult?.metrics;
-  const metrics = useMemo(() => baseMetrics && parseResult ? recalculateMetrics(parseResult.trades, capitalInput) : undefined, [baseMetrics, parseResult, capitalInput]);
+  const metrics = useMemo(() => baseMetrics && parseResult ? recalculateMetrics(parseResult.trades, capitalInput === "" ? 0 : capitalInput) : undefined, [baseMetrics, parseResult, capitalInput]);
 
   useEffect(() => {
     if (parseResult && metrics) void handleAnalyze(metrics, parseResult.trades);
@@ -874,7 +869,7 @@ export default function Home() {
                 </p>
                 <div className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/[0.04] p-3">
                   <label className="text-xs font-medium text-amber-100">Capital initial de référence ($)
-                    <input type="number" min="1" step="100" value={capitalInput} onChange={(event) => { const value = Math.max(1, Number(event.target.value) || 1); setCapitalInput(value); try { window.localStorage.setItem("auditprop-capital", String(value)); } catch { /* stockage facultatif */ } }} className="mt-2 block w-44 rounded-xl border border-amber-300/20 bg-black px-3 py-2 text-sm text-white outline-none focus:border-amber-300" />
+                    <input type="number" min="1" step="100" value={capitalInput} placeholder="Entrez votre capital" onChange={(event) => { const raw = event.target.value; setCapitalInput(raw === "" ? "" : Math.max(1, Number(raw))); }} className="mt-2 block w-52 rounded-xl border border-amber-300/20 bg-black px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-amber-300" />
                   </label>
                   <p className="max-w-md text-[11px] leading-5 text-zinc-400">Prioritaire pour les calculs. Détection automatique utilisée comme valeur de départ si le rapport contient un dépôt explicite.</p>
                 </div>
@@ -945,8 +940,8 @@ export default function Home() {
             {activeTab === "cockpit" && (
               <>
                 {insights && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><InsightCard label={insights.profitablePair ? "Paire la plus rentable" : "Aucune paire rentable"} value={insights.profitablePair?.[0] ?? "Aucune donnée positive"} detail={insights.profitablePair ? `${signed(insights.profitablePair[1])} $ net` : "Aucun PnL positif sur l'import"} tone={insights.profitablePair ? "good" : "neutral"} /><InsightCard label="Paire la plus déficitaire" value={insights.toxicPair?.[0] ?? "Donnée insuffisante"} detail={insights.toxicPair ? `${signed(insights.toxicPair[1])} $ net` : "Importez plusieurs trades"} tone="bad" /><InsightCard label="Pire jour de la semaine" value={insights.worstDay?.[0] ?? "Donnée insuffisante"} detail={insights.worstDay ? `${signed(insights.worstDay[1])} $ cumulé` : "Données insuffisantes"} tone="bad" /><InsightCard label={insights.bestSession ? "Session positive" : "Aucune session positive"} value={insights.bestSession?.[0] ?? "Aucune donnée positive"} detail={insights.bestSession ? `${signed(insights.bestSession[1])} $ cumulé` : "Aucun PnL positif sur l'import"} tone={insights.bestSession ? "good" : "neutral"} /></div>}
-                {metrics.totalTrades < 5 && <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-xs text-amber-100">Échantillon trop faible : les statistiques par paire et par horaire sont indicatives avec moins de 5 trades.</div>}
-                {metrics.abnormalSizingAlert && <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-3 text-xs text-rose-100">Sizing anormal détecté : {metrics.abnormalSizingCount} variation(s) d’au moins 5× autour du volume moyen. Vérifiez le risque d’over-leveraging ou de martingale.</div>}
+                {metrics.smallSampleSymbols.length > 0 && <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-xs text-amber-100">Échantillon trop faible : {metrics.smallSampleSymbols.map((symbol) => `${symbol} (${parseResult.trades.filter((trade) => trade.symbol === symbol).length} trades)`).join(", ")}. Les statistiques par paire restent indicatives sous 5 trades.</div>}
+                {metrics.abnormalSizingAlert && <div className="space-y-2 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-3 text-xs text-rose-100"><p>Sizing anormal détecté : {metrics.abnormalSizingCount} saut(s) de lot dans le temps.</p>{metrics.sizingAlerts.map((alert, index) => <p key={`${alert.message}-${index}`} className={alert.kind === "too-large" ? "text-rose-200" : "text-amber-200"}>{alert.message}</p>)}</div>}
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   <StatCard
                     label="P&L total"
@@ -1051,7 +1046,7 @@ export default function Home() {
                           width={62}
                           domain={["dataMin - 100", "dataMax + 100"]}
                           tickFormatter={(value: number) =>
-                            `${Math.round(value).toLocaleString("fr-FR")} $`
+                            `${value.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`
                           }
                         />
                         <Tooltip content={<ChartTooltip />} />
