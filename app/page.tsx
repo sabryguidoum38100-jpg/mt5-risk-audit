@@ -55,6 +55,7 @@ import { ConsistencyCheck, InstitutionalMetrics, PnlHeatmap } from "@/components
 import { AuditCard, MonteCarloPanel, StrategyRoadmap, TradeTagging, TradingOsSummary } from "@/components/trading-os-panels";
 import { projectMonteCarlo } from "@/lib/monte-carlo";
 import { DEMO_TRADE_COUNT, getDemoHistoryCsv } from "@/lib/demo-history";
+import DecisionGate from "@/components/decision-gate";
 
 interface DetectedBias {
   name: string;
@@ -942,6 +943,7 @@ export default function Home() {
             {activeTab === "cockpit" && (
               <>
                 {insights && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><InsightCard label={insights.profitablePair ? "Paire la plus rentable" : "Aucune paire rentable"} value={insights.profitablePair?.[0] ?? "Aucune donnée positive"} detail={insights.profitablePair ? `${signed(insights.profitablePair[1])} $ net` : "Aucun PnL positif sur l'import"} tone={insights.profitablePair ? "good" : "neutral"} /><InsightCard label="Paire la plus déficitaire" value={insights.toxicPair?.[0] ?? "Donnée insuffisante"} detail={insights.toxicPair ? `${signed(insights.toxicPair[1])} $ net` : "Importez plusieurs trades"} tone="bad" /><InsightCard label="Pire jour de la semaine" value={insights.worstDay?.[0] ?? "Donnée insuffisante"} detail={insights.worstDay ? `${signed(insights.worstDay[1])} $ cumulé` : "Données insuffisantes"} tone="bad" /><InsightCard label={insights.bestSession ? "Session positive" : "Aucune session positive"} value={insights.bestSession?.[0] ?? "Aucune donnée positive"} detail={insights.bestSession ? `${signed(insights.bestSession[1])} $ cumulé` : "Aucun PnL positif sur l'import"} tone={insights.bestSession ? "good" : "neutral"} /></div>}
+                <DecisionGate metrics={metrics} trades={parseResult.trades} />
                 {metrics.smallSampleSymbols.length > 0 && <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-xs text-amber-100">Échantillon trop faible : {metrics.smallSampleSymbols.map((symbol) => `${symbol} (${parseResult.trades.filter((trade) => trade.symbol === symbol).length} trades)`).join(", ")}. Les statistiques par paire restent indicatives sous 5 trades.</div>}
                 {metrics.abnormalSizingAlert && <div className="space-y-2 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] p-3 text-xs text-rose-100"><p>Sizing anormal détecté : {metrics.abnormalSizingCount} saut(s) de lot dans le temps.</p>{metrics.sizingAlerts.map((alert, index) => <p key={`${alert.message}-${index}`} className={alert.kind === "too-large" ? "text-rose-200" : "text-amber-200"}>{alert.message}</p>)}</div>}
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
